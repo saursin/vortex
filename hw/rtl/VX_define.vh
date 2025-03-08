@@ -335,29 +335,55 @@
         .data_out (dst) \
     )
 
-`define BUFFER_EX(dst, src, ena, resetw, latency) \
-    VX_pipe_register #( \
-        .DATAW  ($bits(dst)), \
-        .RESETW (resetw), \
-        .DEPTH  (latency) \
-    ) __buffer_ex`__LINE__ ( \
-        .clk      (clk), \
-        .reset    (reset), \
-        .enable   (ena), \
-        .data_in  (src), \
-        .data_out (dst) \
-    )
+`ifdef VCS_SIM
+    `define BUFFER_EX(dst, src, ena, resetw, latency) \
+        VX_pipe_register #( \
+            .DATAW  ($bits(dst)), \
+            .RESETW (resetw), \
+            .DEPTH  (latency) \
+        ) __buffer_ex``__LINE__ ( \
+            .clk      (clk), \
+            .reset    (reset), \
+            .enable   (ena), \
+            .data_in  (src), \
+            .data_out (dst) \
+        )
+`else 
+    `define BUFFER_EX(dst, src, ena, resetw, latency) \
+        VX_pipe_register #( \
+            .DATAW  ($bits(dst)), \
+            .RESETW (resetw), \
+            .DEPTH  (latency) \
+        ) __buffer_ex`__LINE__ ( \
+            .clk      (clk), \
+            .reset    (reset), \
+            .enable   (ena), \
+            .data_in  (src), \
+            .data_out (dst) \
+        )
+`endif
 
 `define BUFFER(dst, src) `BUFFER_EX(dst, src, 1'b1, $bits(dst), 1)
 
-`define POP_COUNT_EX(out, in, model) \
-    VX_popcount #( \
-        .N ($bits(in)), \
-        .MODEL (model) \
-    ) __pop_count_ex`__LINE__ ( \
-        .data_in  (in), \
-        .data_out (out) \
-    )
+`ifdef VCS_SIM
+    `define POP_COUNT_EX(out, in, model) \
+        VX_popcount #( \
+            .N ($bits(in)), \
+            .MODEL (model) \
+        ) __pop_count_ex```__LINE__ ( \
+            .data_in  (in), \
+            .data_out (out) \
+        )
+`else 
+    `define POP_COUNT_EX(out, in, model) \
+        VX_popcount #( \
+            .N ($bits(in)), \
+            .MODEL (model) \
+        ) __pop_count_ex`__LINE__ ( \
+            .data_in  (in), \
+            .data_out (out) \
+        )
+`endif
 
 `define POP_COUNT(out, in) `POP_COUNT_EX(out, in, 1)
 
