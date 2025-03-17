@@ -15,9 +15,12 @@ workspace_dir = "WORKSPACE"
 sym_links_dir = os.path.join(workspace_dir, "sym_links")
 os.makedirs(sym_links_dir, exist_ok=True)
 
+# Third party library
+common_cells_dir = os.path.join(sym_links_dir, "common_cells")
+os.makedirs(common_cells_dir, exist_ok=True)
+
 # Output file path in WORKSPACE
 output_file = os.path.join(sym_links_dir, "sim_no_path.include")
-
 
 # Open input file for reading
 with open(input_file, 'r') as input_fp:
@@ -40,12 +43,20 @@ with open(input_file, 'r') as input_fp:
 
                     # Check if the file exists
                     if os.path.exists(file_path):
-                        # Create symbolic link in WORKSPACE
-                        link_path = os.path.join(sym_links_dir, os.path.basename(file_path))
+                        # Determine the appropriate directory for the symbolic link
+                        if os.path.basename(file_path) == 'registers.svh':
+                            link_dir = common_cells_dir
+                            output_prefix = "sym_links/common_cells"
+                        else:
+                            link_dir = sym_links_dir
+                            output_prefix = "sym_links"
+
+                        # Create symbolic link in the appropriate directory
+                        link_path = os.path.join(link_dir, os.path.basename(file_path))
                         os.symlink(os.path.abspath(file_path), link_path)
 
-                        # Write only the filename to the output file
-                        output_fp.write(f"sym_links/{os.path.basename(file_path)}\n")
+                        # Write the appropriate path to the output file
+                        output_fp.write(f"{output_prefix}/{os.path.basename(file_path)}\n")
                     else:
                         print(f"Error: File '{file_path}' does not exist. Aborting process.")
                         break

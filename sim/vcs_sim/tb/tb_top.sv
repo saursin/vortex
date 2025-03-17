@@ -30,9 +30,8 @@ module tb_top;
   
   //enabling the wave dump
   initial begin 
-	$vcdpluson; 
-	$vcdplusmemon;
-    $dumpfile("dump.vcd"); 
-	$dumpvars;
+	$fsdbDumpfile("simulation.fsdb");
+	$fsdbDumpvars(0, tb_top, "+all");
+	$fsdbDumpMDA();
   end
 endmodule

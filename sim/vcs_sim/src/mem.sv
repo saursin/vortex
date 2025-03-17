@@ -24,10 +24,11 @@ module memory #(
 );
 
     // Internal RAM storage
-    localparam MEM_DEPTH = 1024*1024*8/`VX_MEM_DATA_WIDTH;
-    //localparam MEM_DEPTH = 805306368;
+    // localparam MEM_DEPTH = 1024*1024*8/`VX_MEM_DATA_WIDTH;
+    localparam MEM_DEPTH = 805306368;
    // logic [`VX_MEM_DATA_WIDTH-1:0] ram [0:MEM_DEPTH-1] = '{default: '0};
     logic [`VX_MEM_DATA_WIDTH-1:0] ram [0:MEM_DEPTH-1] = '{default: '0};
+
 
     genvar b;
     generate
@@ -35,8 +36,11 @@ module memory #(
             always @(posedge clk or posedge rst) begin
                 if (rst) begin
                     mem_rsp_valid[b] <= 1'b0;
-                    mem_req_ready[b] <= 1'b1; // Always ready to accept new requests
+                    mem_req_ready[b] <= 1'b0; 
+                    mem_rsp_data[b] <= '0; 
+                    mem_rsp_tag[b] <= '0;// Always ready to accept new requests
                 end else begin
+                    mem_req_ready[b] <= 1'b1; 
                     if (mem_req_valid[b] && mem_req_ready[b]) begin
                         if (mem_req_rw[b]) begin
                             // Write Operation
@@ -51,10 +55,10 @@ module memory #(
                             mem_rsp_data[b]  <= ram[mem_req_addr[b]];
                             mem_rsp_tag[b]   <= mem_req_tag[b];
                         end
-                    end
+                    end 
                     
                     // Response handling
-                    if (mem_rsp_valid[b] && mem_rsp_ready[b]) begin
+                   else if (mem_rsp_valid[b] && mem_rsp_ready[b]) begin
                         mem_rsp_valid[b] <= 1'b0; // Clear response when it is accepted
                     end
                 end

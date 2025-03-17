@@ -74,7 +74,7 @@ module VX_sp_ram #(
     parameter RADDR_REG   = 0, // read address registered hint
     parameter RADDR_RESET = 0, // read address has reset
     parameter RDW_ASSERT  = 0,
-    parameter RESET_RAM   = 0,
+    parameter RESET_RAM   = 1,
     parameter INIT_ENABLE = 0,
     parameter INIT_FILE   = "",
     parameter [DATAW-1:0] INIT_VALUE = 0,

@@ -5,7 +5,7 @@ class environment;
   
   //virtual interface
   virtual vortex_wrapper_if vtx_if;
-
+  logic [31:0] exitcode;
   string program_file;
   logic [`VX_MEM_DATA_WIDTH-1:0] init_data [0:(1024*1024*8/`VX_MEM_DATA_WIDTH)-1];
   //constructor
@@ -18,33 +18,48 @@ class environment;
   task run;
     $display("Time: %t | ENV run task", $time);
     $display("Slave driver run");
-    //dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,`STARTUP_ADDR);
-    dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,'h11000);
+    write_mem(`IO_MPM_ADDR + 8, 'h1);  
+    exitcode = read_mem(`IO_MPM_ADDR + 8); 
+    $display("Check exitcode %d",exitcode); 
+    vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;
+    vtx_if.dcr_intf.dcr_wr_addr <= 'h0;
+    vtx_if.dcr_intf.dcr_wr_data <= 'h0;
+    @(posedge vtx_if.clk_rst_intf.clk);
+    dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,`STARTUP_ADDR);
+    //dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,'h11000);
     $display("DCR write");
     dcr_write(`VX_DCR_BASE_MPM_CLASS, 0);
     if (!$value$plusargs("program=%s", program_file)) begin
       $display("Error: No program file specified!");
       $finish;
     end
-    //load_program(program_file, `STARTUP_ADDR);
-    load_program(program_file, 'h11000);
+    load_program(program_file, `STARTUP_ADDR);
+    //load_program(program_file, 'h11000);
     vtx_if.clk_rst_intf.rst <= 1'b1;
     repeat (`RESET_DELAY) @(posedge vtx_if.clk_rst_intf.clk);
     $display("Time: %t | ENV run reset done", $time);
     vtx_if.clk_rst_intf.rst <= 1'b0;
-    // fork
-    //   begin
+    fork
+      begin
             $display("Waiting for busy to get 1");
             wait(vtx_if.busy == 1);
             $display("Waiting for busy to get 0");
             wait(vtx_if.busy == 0);
-    //   end
-    //   begin
-    //        #20000;
-    //        $finish;
-    //   end
+            $display("Completed waiting for busy 0");
+      end
+      begin
+          #20000000;
+          $finish;
+      end
       
-    // join_any
+    join_any
+
+    exitcode = read_mem(`IO_MPM_ADDR + 8);  
+    if(exitcode == 0) begin
+        $display("Program executed Successfully");
+    end else begin
+        $display("Program has a failure exitcode %d",exitcode);
+    end
   endtask
   
   task load_program(string program_file, int unsigned startup_addr);
@@ -58,6 +73,8 @@ class environment;
        //$readmemb(program_file, tb_top.VX_wrapper_top.mem_inst.ram , startup_addr);
     end else if (program_ext == "hex") begin
         loadHexImage(program_file);
+    end else if (program_ext == "mem") begin
+        loadmemImage(program_file, startup_addr); 
     end else begin
         $display("*** error: only *.bin or *.hex images supported.");
         return;
@@ -94,6 +111,38 @@ class environment;
     //tb_top.VX_wrapper_top.mem_inst.initialize_ram(init_data);
     $fclose(file);
     $display("Binary image %s loaded successfully at address %h", filename, start_addr);
+  endtask
+
+  task loadmemImage(string filename, int unsigned start_addr);
+    int file, i;
+    bit [31:0] data;
+
+    file = $fopen(filename, "rb"); // Open binary file
+    if (file == 0) begin
+        $display("*** error: Failed to open %s", filename);
+        return;
+    end
+
+    i = 0;
+    while (!$feof(file)) begin
+        // Step 1: Calculate the address offset
+        int bit_select_offset = ((start_addr + i) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+        int address_offset = ((start_addr + i)) / (`VX_MEM_DATA_WIDTH/ 8);
+        //address_offset = address_offset << `LOG2DATA_WIDTH;
+
+        void'($fscanf(file, "%h\n", data));  
+        $display("Writing to RAM: Addr=%h | Addr offset=%h |Offset=%h | Data=%h",start_addr+i, address_offset, bit_select_offset, data);
+        // Step 3: Perform the memory write
+       
+       $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32] = data; 
+
+            $display("Start address %h address %h data %h", start_addr, start_addr + i, $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset]);  
+        
+        i = i+4;
+    end
+    //tb_top.VX_wrapper_top.mem_inst.initialize_ram(init_data);
+    $fclose(file);
+    $display("Mem image %s loaded successfully at address %h", filename, start_addr);
   endtask
 
   task loadHexImage(string filename);
@@ -167,5 +216,18 @@ class environment;
         @(posedge vtx_if.clk_rst_intf.clk);
         vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;        
   endtask
+
+  function logic [31:0] read_mem(int unsigned addr);
+      int bit_select_offset = ((addr) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+      int address_offset = ((addr)) / (`VX_MEM_DATA_WIDTH/ 8);
+      return tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32];
+  endfunction
+
+  function void write_mem(int unsigned addr, logic [31:0] data);
+      int bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+      int address_offset = addr / (`VX_MEM_DATA_WIDTH / 8);
+      
+      tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32] = data;
+  endfunction
 
 endclass
