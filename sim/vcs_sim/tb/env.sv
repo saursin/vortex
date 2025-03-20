@@ -8,6 +8,7 @@ class environment;
   logic [31:0] exitcode;
   string program_file;
   logic [`VX_MEM_DATA_WIDTH-1:0] init_data [0:(1024*1024*8/`VX_MEM_DATA_WIDTH)-1];
+
   //constructor
   function new(virtual vortex_wrapper_if vtx_vif);
     //get the interface from test
@@ -16,49 +17,60 @@ class environment;
 
   //run task
   task run;
-    $display("Time: %t | ENV run task", $time);
-    $display("Slave driver run");
+     
+    $display("Time: %t | Start of simulation", $time);
+
+    // Initially make the exit code as 1, to make sure we don't read the default value of 0 as success
     write_mem(`IO_MPM_ADDR + 8, 'h1);  
     exitcode = read_mem(`IO_MPM_ADDR + 8); 
-    $display("Check exitcode %d",exitcode); 
+    $display("Time: %t | Exit code value %d", $time, exitcode);
+    
+    // Drive default 0's on dcr interface
     vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;
     vtx_if.dcr_intf.dcr_wr_addr <= 'h0;
     vtx_if.dcr_intf.dcr_wr_data <= 'h0;
+    
+    // DCR write to set the start address
     @(posedge vtx_if.clk_rst_intf.clk);
     dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,`STARTUP_ADDR);
-    //dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,'h11000);
-    $display("DCR write");
     dcr_write(`VX_DCR_BASE_MPM_CLASS, 0);
+    $display("Time: %t | Finished DCR writes", $time);
+
+    // Check if a program file is specified or not
     if (!$value$plusargs("program=%s", program_file)) begin
-      $display("Error: No program file specified!");
-      $finish;
+      $fatal("Error: No program file specified!");
     end
+    
+    //load program at start address using backdoor access
     load_program(program_file, `STARTUP_ADDR);
-    //load_program(program_file, 'h11000);
+
+    // Driving reset
     vtx_if.clk_rst_intf.rst <= 1'b1;
     repeat (`RESET_DELAY) @(posedge vtx_if.clk_rst_intf.clk);
-    $display("Time: %t | ENV run reset done", $time);
+    $display("Time: %t | Vortex reset done", $time);
     vtx_if.clk_rst_intf.rst <= 1'b0;
+
+    // Wait for vortex busy to be driven as 1 and then wait for it to get 0.
     fork
       begin
-            $display("Waiting for busy to get 1");
+            $display("Time: %t | Waiting for busy to get 1", $time);
             wait(vtx_if.busy == 1);
-            $display("Waiting for busy to get 0");
+            $display("Time: %t | Waiting for busy to get 0", $time);
             wait(vtx_if.busy == 0);
-            $display("Completed waiting for busy 0");
+            $display("Time: %t | Completed waiting for busy 0", $time);
       end
       begin
-          #20000000;
+        #20000000;
           $finish;
       end
-      
     join_any
 
+    // Read exit code from memory 
     exitcode = read_mem(`IO_MPM_ADDR + 8);  
     if(exitcode == 0) begin
-        $display("Program executed Successfully");
+        $display("Time: %t | Program executed Successfully", $time);
     end else begin
-        $display("Program has a failure exitcode %d",exitcode);
+        $error("Time: %t | Program has a failure exitcode %d",$time,exitcode);
     end
   endtask
   
@@ -68,128 +80,35 @@ class environment;
     // Extract file extension
     program_ext = file_extension(program_file);
     
-    if (program_ext == "bin") begin
-       loadBinImage(program_file, startup_addr);
-       //$readmemb(program_file, tb_top.VX_wrapper_top.mem_inst.ram , startup_addr);
-    end else if (program_ext == "hex") begin
-        loadHexImage(program_file);
-    end else if (program_ext == "mem") begin
+    if (program_ext == "mem") begin
         loadmemImage(program_file, startup_addr); 
     end else begin
-        $display("*** error: only *.bin or *.hex images supported.");
+        $fatal("*** error: only *.mem images supported.");
         return;
     end
   endtask
 
-  task loadBinImage(string filename, int unsigned start_addr);
-    int file, i;
-    bit [7:0] data;
-
-    file = $fopen(filename, "rb"); // Open binary file
-    if (file == 0) begin
-        $display("*** error: Failed to open %s", filename);
-        return;
-    end
-
-    i = 0;
-    while (!$feof(file)) begin
-        // Step 1: Calculate the address offset
-        int bit_select_offset = ((start_addr + i) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
-        int address_offset = ((start_addr + i)) / (`VX_MEM_DATA_WIDTH/ 8);
-        //address_offset = address_offset << `LOG2DATA_WIDTH;
-
-        void'($fread(data, file)); // Read one byte 
-        $display("Writing to RAM: Addr=%h | Offset=%h | Data=%h", address_offset, bit_select_offset, data);
-        // Step 3: Perform the memory write
-       
-       $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 8] = data; 
-
-            $display("Start address %h address %h data %h", start_addr, start_addr + i, $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset]);  
-        
-        i++;
-    end
-    //tb_top.VX_wrapper_top.mem_inst.initialize_ram(init_data);
-    $fclose(file);
-    $display("Binary image %s loaded successfully at address %h", filename, start_addr);
-  endtask
 
   task loadmemImage(string filename, int unsigned start_addr);
     int file, i;
     bit [31:0] data;
 
-    file = $fopen(filename, "rb"); // Open binary file
+    file = $fopen(filename, "rb"); // Open mem file
     if (file == 0) begin
-        $display("*** error: Failed to open %s", filename);
+        $fatal("*** error: Failed to open %s", filename);
         return;
     end
 
     i = 0;
     while (!$feof(file)) begin
-        // Step 1: Calculate the address offset
-        int bit_select_offset = ((start_addr + i) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
-        int address_offset = ((start_addr + i)) / (`VX_MEM_DATA_WIDTH/ 8);
-        //address_offset = address_offset << `LOG2DATA_WIDTH;
 
         void'($fscanf(file, "%h\n", data));  
-        $display("Writing to RAM: Addr=%h | Addr offset=%h |Offset=%h | Data=%h",start_addr+i, address_offset, bit_select_offset, data);
-        // Step 3: Perform the memory write
-       
-       $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32] = data; 
-
-            $display("Start address %h address %h data %h", start_addr, start_addr + i, $root.tb_top.VX_wrapper_top.mem_inst.ram[address_offset]);  
-        
+        write_mem(start_addr + i, data);
         i = i+4;
+
     end
-    //tb_top.VX_wrapper_top.mem_inst.initialize_ram(init_data);
     $fclose(file);
-    $display("Mem image %s loaded successfully at address %h", filename, start_addr);
-  endtask
-
-  task loadHexImage(string filename);
-    int file, addr, byteCount, recordType, offset;
-    string line;
-    bit [7:0] data;
-    
-    file = $fopen(filename, "r"); // Open hex file
-    if (file == 0) begin
-        $display("error: %s not found", filename);
-        $finish;
-    end
-
-    offset = 0;
-
-    while (!$feof(file)) begin
-        void'($fgets(line, file)); // Read a line
-
-        // Ignore empty lines and ensure it starts with ':'
-        if (line.len() == 0 || line[0] != ":") continue; 
-
-        // Extract byte count, address, record type
-        void'($sscanf(line.substr(1,2), "%h", byteCount));
-        void'($sscanf(line.substr(3,6), "%h", addr));
-        void'($sscanf(line.substr(7,8), "%h", recordType));
-
-        // Process record types
-        case (recordType)
-        8'h00: begin // Data record
-            for (int i = 0; i < byteCount; i++) begin
-            void'($sscanf(line.substr(9 + (i * 2), 10 + (i * 2)), "%h", data));
-           // axi_slave_driver.mem_handle[addr + offset + i] = data;
-            end
-        end
-        8'h02: begin // Extended segment address record
-            void'($sscanf(line.substr(9,12), "%h", offset));
-            offset = offset << 4;
-        end
-        8'h04: begin // Extended linear address record
-            void'($sscanf(line.substr(9,12), "%h", offset));
-            offset = offset << 16;
-        end
-        endcase
-    end
-
-    $fclose(file);
-    $display("Hex image %s loaded successfully into memory", filename);
+    $display("Time: %t | Mem image %s loaded successfully at address 0x%h", $time, filename, start_addr);
   endtask
 
   function string file_extension(string filename);
@@ -208,26 +127,52 @@ class environment;
 
   task dcr_write(input logic [`VX_DCR_ADDR_WIDTH-1:0] addr, input logic [`VX_DCR_DATA_WIDTH-1:0] value);
         @(posedge vtx_if.clk_rst_intf.clk);
-        $display("Inside DCR write");
         vtx_if.dcr_intf.dcr_wr_valid <= 1'b1;
         vtx_if.dcr_intf.dcr_wr_addr <= addr;
         vtx_if.dcr_intf.dcr_wr_data <= value;
-        $display("Waiting for clk");
         @(posedge vtx_if.clk_rst_intf.clk);
         vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;        
   endtask
 
   function logic [31:0] read_mem(int unsigned addr);
-      int bit_select_offset = ((addr) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
-      int address_offset = ((addr)) / (`VX_MEM_DATA_WIDTH/ 8);
-      return tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32];
+      int bit_select_offset;
+      int address_offset;
+
+      if (addr <= 'h17F) begin
+          bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = addr / (`VX_MEM_DATA_WIDTH / 8);
+          return tb_top.VX_wrapper_top.mem_inst.ram1[address_offset][bit_select_offset +: 32];
+      end else if (addr >= 'h80000000 && addr < ('h80000000 + 1024*1024)) begin
+          bit_select_offset = ((addr - 'h80000000) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = (addr - 'h80000000) / (`VX_MEM_DATA_WIDTH / 8);
+          return tb_top.VX_wrapper_top.mem_inst.ram2[address_offset][bit_select_offset +: 32];
+      end else if (addr >= 'hFFFD1FC0 && addr <= 'hFFFFFFFF) begin
+          bit_select_offset = ((addr - 'hFFFD1FC0) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = (addr - 'hFFFD1FC0) / (`VX_MEM_DATA_WIDTH / 8);
+          return tb_top.VX_wrapper_top.mem_inst.ram2[address_offset][bit_select_offset +: 32];
+      end else begin
+          $fatal("Error: Address %h is out of range!", addr);
+      end
   endfunction
 
   function void write_mem(int unsigned addr, logic [31:0] data);
-      int bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
-      int address_offset = addr / (`VX_MEM_DATA_WIDTH / 8);
-      
-      tb_top.VX_wrapper_top.mem_inst.ram[address_offset][bit_select_offset +: 32] = data;
-  endfunction
+      int bit_select_offset;
+      int address_offset;
 
+      if (addr <= 'h17F) begin
+          bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = addr / (`VX_MEM_DATA_WIDTH / 8);
+          tb_top.VX_wrapper_top.mem_inst.ram1[address_offset][bit_select_offset +: 32] = data;
+      end else if (addr >= 'h80000000 && addr < ('h80000000 + 1024*1024)) begin
+          bit_select_offset = ((addr - 'h80000000) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = (addr - 'h80000000) / (`VX_MEM_DATA_WIDTH / 8);
+          tb_top.VX_wrapper_top.mem_inst.ram2[address_offset][bit_select_offset +: 32] = data;
+      end else if (addr >= 'hFFFD1FC0 && addr <= 'hFFFFFFFF) begin
+          bit_select_offset = ((addr - 'hFFFD1FC0) % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+          address_offset = (addr - 'hFFFD1FC0) / (`VX_MEM_DATA_WIDTH / 8);
+          tb_top.VX_wrapper_top.mem_inst.ram3[address_offset][bit_select_offset +: 32] = data;
+      end else begin
+          $fatal("Error: Address %h is out of range!", addr);
+      end
+  endfunction
 endclass

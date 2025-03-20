@@ -10,11 +10,13 @@ FILELIST_FILE_NAME=filelist.f
 VERILOG_DEFINES:= +define+SIM=1
 VERILOG_DEFINES+= +define+FPU_FPNEW
 VERILOG_DEFINES+= +define+VCS_SIM
+VERILOG_DEFINES+= +define+SIMULATION
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
 WORKSPACE = $(CURRENT_DIR)/WORKSPACE
 TESTNAME :=
+PROGRAM ?= program_files/riscadd.mem
 
 #INCLUDE_DIRS :=
 help:
@@ -65,11 +67,12 @@ coverage:
 	verdi -cov -covdir simv.vdb&
 
 # +lint=all -kdb 		-timescale=1ns/10ps -debug_acc+pp+dmptf -debug_region+cell+encrypt 
+# remove assert none later
 vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME} 
 	cd $(WORKSPACE) && \
-	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64  \
-	    -debug_access+all -l simulation.log +vpdfile+./simulation.vpd +fsdb+./simulation.fsdb +dumpvars $(VERILOG_DEFINES) +testname=$(TESTNAME) \
-		+incdir+sym_links -top tb_top +program=../fibonacci.bin
+	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64  -assert disable -kdb\
+	    -debug_access+all -l simulation.log +fsdb +fsdb+all +fsdbfile+./simulation.fsdb $(VERILOG_DEFINES) +testname=$(TESTNAME) \
+		+incdir+sym_links +incdir+sym_links/common_cells -top tb_top +program=../$(PROGRAM)
 		# simv 
 
 clean:

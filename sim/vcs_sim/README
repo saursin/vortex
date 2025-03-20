@@ -1,0 +1,50 @@
+Usage
+----------------------------------------------------
+Follow these steps to set up and run the simulation:
+
+1. Set the Working Directory
+
+Ensure you are in the vcs_sim directory before running the commands.
+
+2. Clean Previous Builds
+
+make clean
+
+This removes any existing compiled files and ensures a fresh build.
+
+3. Link the Necessary Files
+
+make link
+
+This step links the required dependencies.
+
+4. Compile the Simulation
+
+make vcs
+
+This compiles the project and prepares it for execution.
+
+5. Run with a Custom Program File
+
+If you want to pass a specific program file, use:
+
+make vcs PROGRAM=program_files/<file_name>
+
+Note: Only .mem files should be passed as <file_name>.
+
+Prerequisites
+--------------
+
+1. Synopsys Tools
+
+Ensure you have loaded the Synopsys tools before running any commands.
+
+2. Python Compatibility
+
+Ensure you have a compatible Python version installed.
+
+If needed, you can check your version using:
+
+python --version
+
+
