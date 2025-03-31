@@ -184,6 +184,9 @@
 ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/control_mvp.sv
 ../../third_party/cvfpu/src/fpnew_cast_multi.sv
 ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/iteration_div_sqrt_mvp.sv
+// Scan related files
+./src/vortex_sc_wrapper.sv
+./src/scan_cell.sv
 // Testbench and vcs simulation related files
 ./src/mem.sv
 ./src/VX_wrapper.sv
@@ -192,4 +195,6 @@
 ./tb/vortex_wrapper_if.sv
 ./tb/tb_top.sv
 ./tb/env.sv
+./tb/scan_if.sv
+./tb/vortex_sc_tasks.sv
 ./tb/test.sv

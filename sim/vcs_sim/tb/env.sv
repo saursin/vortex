@@ -29,6 +29,8 @@ class environment;
     vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;
     vtx_if.dcr_intf.dcr_wr_addr <= 'h0;
     vtx_if.dcr_intf.dcr_wr_data <= 'h0;
+
+    // FIXME: initialize the scan interface
     
     // DCR write to set the start address
     @(posedge vtx_if.clk_rst_intf.clk);
@@ -44,6 +46,10 @@ class environment;
     //load program at start address using backdoor access
     load_program(program_file, `STARTUP_ADDR);
 
+    // FIXME: drive the scan chain before reset
+    // Either use the scan chain or the memory initialization to load the program
+    // perform_scan_sequence(scan_sequence.hex);   // See this task below
+    
     // Driving reset
     vtx_if.clk_rst_intf.rst <= 1'b1;
     repeat (`RESET_DELAY) @(posedge vtx_if.clk_rst_intf.clk);
@@ -175,4 +181,23 @@ class environment;
           $fatal("Error: Address %h is out of range!", addr);
       end
   endfunction
+
+    // FIXME:  check if this is correct
+    task perform_scan_sequence(string filename);
+        int file, i;
+        file = $fopen(filename, "rb"); // Open mem file
+        if (file == 0) begin
+            $fatal("*** error: Failed to open %s", filename);
+            return;
+        end
+
+        while (!$feof(file)) begin
+            void'($fscanf(file, "%h\n", scanReg));
+            scan_inputs();
+            report_scan_results();
+        end
+        $fclose(file);
+        $display("Time: %t | Scan complete", $time);
+    endtask
+
 endclass
