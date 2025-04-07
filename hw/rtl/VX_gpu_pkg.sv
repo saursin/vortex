@@ -293,7 +293,7 @@ package VX_gpu_pkg;
     localparam ISSUE_WIS   = `CLOG2(PER_ISSUE_WARPS);
     localparam ISSUE_WIS_W = `UP(ISSUE_WIS);
 
-    function logic [`NW_WIDTH-1:0] wis_to_wid(
+    function automatic logic [`NW_WIDTH-1:0] wis_to_wid(
         input logic [ISSUE_WIS_W-1:0] wis,
         input logic [ISSUE_ISW_W-1:0] isw
     );
@@ -306,7 +306,7 @@ package VX_gpu_pkg;
         end
     endfunction
 
-    function logic [ISSUE_ISW_W-1:0] wid_to_isw(
+    function automatic logic [ISSUE_ISW_W-1:0] wid_to_isw(
         input logic [`NW_WIDTH-1:0] wid
     );
         if (ISSUE_ISW != 0) begin
@@ -316,7 +316,7 @@ package VX_gpu_pkg;
         end
     endfunction
 
-    function logic [ISSUE_WIS_W-1:0] wid_to_wis(
+    function automatic logic [ISSUE_WIS_W-1:0] wid_to_wis(
         input logic [`NW_WIDTH-1:0] wid
     );
         if (ISSUE_WIS != 0) begin
@@ -328,7 +328,7 @@ package VX_gpu_pkg;
 
     ///////////////////////// Miscaellaneous functions ////////////////////////
 
-    function logic [`SFU_WIDTH-1:0] op_to_sfu_type(
+    function automatic logic [`SFU_WIDTH-1:0] op_to_sfu_type(
         input logic [`INST_OP_BITS-1:0] op_type
     );
         case (op_type)

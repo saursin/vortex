@@ -180,6 +180,17 @@
 `ifndef SIMULATION
     `define ASYNC_BRAM_PATCH
 `endif
+`elsif SYNOPSYS
+`define MAX_FANOUT      8
+`define FORCE_BRAM(d,w) (d >= 16 || w >= 128 || (d * w) >= 256)
+`define USE_BLOCK_BRAM
+`define USE_FAST_BRAM
+`define NO_RW_RAM_CHECK
+`define RW_RAM_CHECK
+`define DISABLE_BRAM
+`define PRESERVE_NET
+`define BLACKBOX_CELL
+`define STRING
 `else
 `define MAX_FANOUT      8
 `define FORCE_BRAM(d,w) (d >= 16 || w >= 128 || (d * w) >= 256)
