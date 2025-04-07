@@ -14,7 +14,8 @@ VERILOG_DEFINES+= +define+SIMULATION
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
-WORKSPACE = $(CURRENT_DIR)/WORKSPACE
+WORKSPACE_NAME ?= WORKSPACE
+WORKSPACE := $(CURRENT_DIR)/$(WORKSPACE_NAME)
 TESTNAME :=
 PROGRAM ?= program_files/riscadd.mem
 
@@ -46,7 +47,7 @@ link:
 		cd $(WORKSPACE); \
 	fi
 	rm -f $(WORKSPACE)/sym_links/*.sv* $(WORKSPACE)/sym_links/*.svh* $(WORKSPACE)/sym_links/*.vh*
-	python3 link_files.py ${FILELIST_FILE_NAME}
+	python3 link_files.py ${FILELIST_FILE_NAME} $(WORKSPACE)
 
 run_and_view:
 	make vcs
@@ -76,5 +77,5 @@ vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME}
 		# simv 
 
 clean:
-	rm -rf WORKSPACE
+	rm -rf $(WORKSPACE)
 

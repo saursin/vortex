@@ -23,7 +23,8 @@ class environment;
 
     //run task
     task run;
-        
+        string cmd = "";
+        int return_code;
         $display("Time: %t | Start of simulation", $time);
 
         // Initially make the exit code as 1, to make sure we don't read the default value of 0 as success
@@ -31,24 +32,28 @@ class environment;
         exitcode = read_mem(`IO_MPM_ADDR + 8); 
         $display("Time: %t | Exit code value %d", $time, exitcode);
         
-        // Drive default 0's on dcr interface
-        vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;
-        vtx_if.dcr_intf.dcr_wr_addr <= 'h0;
-        vtx_if.dcr_intf.dcr_wr_data <= 'h0;
-        
-        // DCR write to set the start address
-        @(posedge vtx_if.clk_rst_intf.clk);
-        dcr_write(`VX_DCR_BASE_STARTUP_ADDR0,`STARTUP_ADDR);
-        dcr_write(`VX_DCR_BASE_MPM_CLASS, 0);
-        $display("Time: %t | Finished DCR writes", $time);
+        // Initialize scan chain input
+        vtx_if.scan_intf.scan_in <= 1'b0;
+        vtx_if.scan_intf.update  <= 1'b0;
+        vtx_if.scan_intf.capture <= 1'b0;
+        vtx_if.scan_intf.phi     <= 1'b0;
+        vtx_if.scan_intf.phi_bar <= 1'b0; 
 
         // Check if a program file is specified or not
         if (!$value$plusargs("program=%s", program_file)) begin
-        $fatal("Error: No program file specified!");
+            $fatal("Error: No program file specified!");
         end
         
-        //load program at start address using backdoor access
-        load_program(program_file, `STARTUP_ADDR);
+        //load the program using scan chain
+        cmd = $sformatf("python3 ../gen_scan_seq.py %s  >> simulation.log", program_file);
+        $display("Time: %t | File to be loaded %s", $time, program_file);
+        // Python script to generate scanchain input data
+        return_code = $system(cmd);
+        if (return_code != 0) begin
+            $fatal("Error: Execution of the command '%s' failed with return code %0d", cmd, return_code);
+        end
+
+        perform_scan_sequence("scan_sequence.hex");   // See this task below
 
         // Driving reset
         vtx_if.clk_rst_intf.rst <= 1'b1;
@@ -59,14 +64,14 @@ class environment;
         // Wait for vortex busy to be driven as 1 and then wait for it to get 0.
         fork
         begin
-                $display("Time: %t | Waiting for busy to get 1", $time);
-                wait(vtx_if.busy == 1);
-                $display("Time: %t | Waiting for busy to get 0", $time);
-                wait(vtx_if.busy == 0);
-                $display("Time: %t | Completed waiting for busy 0", $time);
+            $display("Time: %t | Waiting for busy to get 1", $time);
+            wait(vtx_if.busy == 1);
+            $display("Time: %t | Waiting for busy to get 0", $time);
+            wait(vtx_if.busy == 0);
+            $display("Time: %t | Completed waiting for busy 0", $time);
         end
         begin
-            #20000000;
+          #20000000;
             $finish;
         end
         join_any
@@ -93,7 +98,6 @@ class environment;
             return;
         end
     endtask
-
 
     task loadmemImage(string filename, int unsigned start_addr);
         int file, i;
@@ -184,5 +188,37 @@ class environment;
         bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
         tb_top.VX_wrapper_top.mem_inst.ram[translated_addr][bit_select_offset +: 32] = data;
     endfunction
-    
+
+    task perform_scan_sequence(string filename);
+         int file, i;
+         logic [1264:0] scanReg;
+         
+         file = $fopen(filename, "r"); // Open mem file
+         if (file == 0) begin
+             $fatal("*** error: Failed to open %s", filename);
+             return;
+         end
+ 
+         while (!$feof(file)) begin
+             void'($fscanf(file, "%h\n", scanReg));
+             scan_inputs(scanReg);
+         end
+         $fclose(file);
+         $display("Time: %t | Scan complete", $time);
+     endtask
+
+
+
+    task scan_inputs(logic [1264:0] scanReg);
+        for (int i = 0; i < 1265; i = i + 1) begin
+            #1  vtx_if.scan_intf.scan_in = scanReg[i];
+            #1  vtx_if.scan_intf.phi = 1'b1;
+            #10 vtx_if.scan_intf.phi = 1'b0;
+            #1  vtx_if.scan_intf.phi_bar = 1'b1;
+            #10 vtx_if.scan_intf.phi_bar = 1'b0;
+        end
+
+        #1   vtx_if.scan_intf.update = 1'b1;
+        #100 vtx_if.scan_intf.update = 1'b0;
+    endtask
 endclass

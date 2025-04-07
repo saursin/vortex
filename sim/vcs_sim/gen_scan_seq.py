@@ -1,4 +1,5 @@
 import math
+import argparse
 
 chain_vrlg = '''
 assign chip_data_out[0:0] = dcr_wr_valid;
@@ -198,7 +199,6 @@ class Chain:
         self.set_segment_data('mem_req_byteen', 0)
         self.set_segment_data('mem_req_tag', 0)
         self.set_segment_data('mem_rsp_ready', 0)
-        
 
     def write_chain_sequence(self, filename, fmt='hex'):
         print(f"[+] Writing chain sequence to {filename} ({fmt})")
@@ -215,23 +215,51 @@ class Chain:
                     raise ValueError(f"Unsupported format: {fmt}")
 
 
-################################################################################        
-chain = Chain(chain_vrlg)
-chain.print_chain()
+################################################################################ 
+def main(input_file):       
+    chain = Chain(chain_vrlg)
+    chain.print_chain()
+    print(f"input file name : {input_file}")
 
-# Example usage
-chain.perform_dcr_write(0x123, 0xdeadbeef)
-chain.perform_axi_write(0x456, 0xdeadbeef, 0xf, 0x1)
-chain.perform_axi_write(0x456, 0xdeadbeef, 0xf, 0x2)
+    # Generating the scan chain sequence for vortex initialization
+    chain.perform_dcr_write(0x1, 0x80000000)
+    addr = 0x2000000
+    byteen = 0xFFFFFFFFFFFFFFFF
+    tag = 0x0
+    with open(input_file, 'r') as f:
+        stop = 0
+        while True:
+            # Read the next 64 lines (each 32 bits)
+            block_data = 0
+            for i in range(16):
+                line = f.readline().strip()
+                if not line:
+                    stop = 1
+                    line = "00000000"
+                if len(line) != 8:
+                    raise ValueError("Each line should be a 32-bit hex value (8 characters).")
+                
+                word_value = int(line, 16)
+                block_data = (word_value << 32*i) | block_data # Concatenate the 32-bit data
 
-chain.write_chain_sequence('scan_sequence.hex')
+            # Perform the memory write for the current 64-word block
+            chain.perform_axi_write(addr, block_data, byteen, tag)
+            addr += 1
+            tag = (tag+1)%1000
+
+            # Break if the end of the file has been reached
+            if stop == 1:  # Less than 64 words read means end of file
+                break
+    chain.write_chain_sequence('scan_sequence.hex')    
 
 
-# Example: Generating the scan chain sequence for vortex initialization
-# chain.perform_dcr_write(start address register, start adddress)
-# addr = 0x00000000
-# with open('memory_init.txt', 'w') as f:
-#     line = f.readline()
-#     data_hex = int2hex(line, ?)
-#     chain.perform_axi_write(addr, data_hex, ?, ?)
-# chain.write_chain_sequence('scan_sequence.hex')    
+
+if __name__ == "__main__":
+    # Set up argument parsing
+    parser = argparse.ArgumentParser(description="Process a memory initialization file.")
+    parser.add_argument('input_file', type=str, help="Path to the memory initialization file (e.g., 'program_files/riscadd.mem')")
+
+    args = parser.parse_args()
+
+    # Call the main function with the input file passed as an argument
+    main(args.input_file)
