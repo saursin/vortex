@@ -82,7 +82,15 @@ gen-sources: $(BUILD_DIR)/sources.f
 $(BUILD_DIR)/sources.f:
 	mkdir -p $(BUILD_DIR); cd $(BUILD_DIR); $(SCRIPT_DIR)/gen_sources.sh -P $(CFLAGS) -Csrc -Osources.f
 
+.PHONY: gen-mem
+gen-mem:
+	$(VORTEX_HOME)/hw/syn/freepdk45/gen_mem.py -j $(VORTEX_HOME)/hw/syn/freepdk45/mems.json -b $(BUILD_DIR)
+
 .PHONY: synth
 synth: $(BUILD_DIR)/sources.f
 	cd $(BUILD_DIR); export VORTEX_HOME=$(VORTEX_HOME); \
-	dc_shell -f $(VORTEX_HOME)/hw/syn/synopsys_new/dc_synth.tcl 2>&1 | tee synth.log
+	dc_shell -f $(VORTEX_HOME)/hw/syn/freepdk45/dc_synth.tcl 2>&1 | tee synth.log
+
+.PHONY: clean
+clean:
+	$(RMDIR) $(BUILD_DIR)

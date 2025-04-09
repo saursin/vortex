@@ -18,6 +18,7 @@ set rtl_filelist    "sources.f"
 set rtl_sources     {}
 set rtl_incdirs     {}
 set rtl_defines     {}
+set blackbox_modules [list "VX_sp_ram" "VX_dp_ram"]
 
 set top_module      "Vortex"
 set clk_port        "clk"
@@ -116,6 +117,16 @@ set search_path [concat $search_path $rtl_incdirs]
 # Read RTL files
 analyze -format sverilog $rtl_sources -define $rtl_defines
 elaborate $top_module
+
+# Set blackbox atribute on modules          // FIXME: This is not working
+if { [llength $blackbox_modules] > 0 } {
+    foreach module $blackbox_modules {
+        puts "Setting blackbox attribute for module $module"
+        set_dont_touch "$module"
+        # set_attribute [get_modules $module] blackbox true
+    }
+}
+
 link
 
 # Check for errors
@@ -142,9 +153,12 @@ set_ideal_network [get_ports $clk_port]
 set_max_fanout $max_fanout [get_ports $rst_port]
 set_false_path -from [get_ports $rst_port]
 
-# Set Blackboxes
-set_attribute [get_modules "VX_sp_ram"] dont_touch true
-set_attribute [get_modules "VX_dp_ram"] dont_touch true
+# # Set Blackboxes
+# set_dont_touch "VX_sp_ram"
+# set_dont_touch "VX_dp_ram"
+
+# set_attribute [get_modules "VX_sp_ram"] dont_touch true
+# set_attribute [get_modules "VX_dp_ram"] dont_touch true
 
 
 ################################################################################
