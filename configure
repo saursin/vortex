@@ -37,6 +37,12 @@ detect_osversion() {
                     # Add new versions as needed
                 esac
                 ;;
+            rhel)
+                case "$VERSION_ID" in
+                    8.10) osversion="rhel/8";;
+                    # Add new versions as needed
+                esac
+                ;;
         esac
     fi
     echo "$osversion"

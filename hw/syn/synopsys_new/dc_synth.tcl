@@ -45,7 +45,7 @@ set NAND2_name      "NAND2_X1"
 ################################################################################
 # Prepare
 ################################################################################
-source "$::env(VORTEX_HOME)/hw/syn/freepdk45/util.tcl"
+source "$::env(VORTEX_HOME)/hw/syn/synopsys_new/util.tcl"
 
 # Create directories
 if {[file exists $output_dir] == 0} {

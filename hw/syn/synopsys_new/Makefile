@@ -84,12 +84,12 @@ $(BUILD_DIR)/sources.f:
 
 .PHONY: gen-mem
 gen-mem:
-	$(VORTEX_HOME)/hw/syn/freepdk45/gen_mem.py -j $(VORTEX_HOME)/hw/syn/freepdk45/mems.json -b $(BUILD_DIR)
+	$(VORTEX_HOME)/hw/syn/synopsys_new/gen_mem.py -j $(VORTEX_HOME)/hw/syn/synopsys_new/mems.json -b $(BUILD_DIR)
 
 .PHONY: synth
 synth: $(BUILD_DIR)/sources.f
 	cd $(BUILD_DIR); export VORTEX_HOME=$(VORTEX_HOME); \
-	dc_shell -f $(VORTEX_HOME)/hw/syn/freepdk45/dc_synth.tcl 2>&1 | tee synth.log
+	dc_shell -f $(VORTEX_HOME)/hw/syn/synopsys_new/dc_synth.tcl 2>&1 | tee synth.log
 
 .PHONY: clean
 clean:
