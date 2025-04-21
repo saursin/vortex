@@ -1,0 +1,9 @@
+#===========================================
+# WORKDIR: dir that contains openram repo
+export WORKDIR=$(dirname -- "$(readlink -f "${BASH_SOURCE}")")
+export OPENRAM_HOME="$WORKDIR/OpenRAM/compiler"
+export OPENRAM_TECH="$WORKDIR/OpenRAM/technology"
+export PYTHONPATH="$OPENRAM_HOME:$OPENRAM_TECH/sky130:$OPENRAM_TECH/sky130/custom:$OPENRAM_HOME:$OPENRAM_TECH/ireepdk45"
+export CONDA_HOME="$WORKDIR/OpenRAM/miniconda"
+#===========================================
+source $CONDA_HOME/bin/activate

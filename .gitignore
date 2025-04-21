@@ -3,3 +3,4 @@
 *.cache
 *.code-workspace
 WORKSPACE/
+/sim/output

@@ -1,5 +1,7 @@
 
 `define LOG2DATA_WIDTH $clog2(`VX_MEM_DATA_WIDTH/8);
+import uvm_pkg::*;
+`include "uvm_macros.svh"
 
 class environment;
   
@@ -140,49 +142,106 @@ class environment;
             vtx_if.dcr_intf.dcr_wr_valid <= 1'b0;        
     endtask
 
-    function logic [31:0] read_mem(int unsigned addr);
-        int bit_select_offset;
-        int address_offset;
-        int translated_addr;
+    // Testbench Memory Access Functions using UVM HDL string access
+    function automatic logic [31:0] read_mem(
+        int unsigned addr
+    );
+        int translated_addr, bank, sram_addr, byte_offset;
+        logic [7:0] bytes[4];
+        logic [31:0] rdata = '0;
+        string hdl_path;
         
-        int word_addr = addr / (`VX_MEM_DATA_WIDTH / 8);
-
-        if (word_addr < region1_size) begin  // Region 1
+        // Calculate word address and translation
+        int word_addr = addr / (`VX_MEM_DATA_WIDTH/8);
+        
+        // Original address translation logic
+        if (word_addr < region1_size) begin
             translated_addr = word_addr;
-        end else if (word_addr >= region3_start) begin  // Region 3
+        end else if (word_addr >= region3_start) begin
             translated_addr = word_addr - region3_start + mem_depth - region3_size;
-        end else if (word_addr >= startup_addr && word_addr <= region2_end) begin  // Region 2
+        end else if (word_addr >= startup_addr && word_addr <= region2_end) begin
             translated_addr = word_addr - startup_addr + region1_size;
         end else begin
-            $display("ERROR: Address 0x%h is out of range!", addr);
-            $fatal("Error: Address %h is out of range!", addr);
+            `uvm_error("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
+            return 0;
         end
 
-        bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
+        // Bank selection (upper 2 bits)
+        bank = translated_addr[13:12];
         
-        return tb_top.VX_wrapper_top.mem_inst.ram[translated_addr][bit_select_offset +: 32];
+        // SRAM address within bank (12-bit)
+        sram_addr = translated_addr[11:0];
+        
+        // Byte offset within 512-bit word
+        byte_offset = addr % (`VX_MEM_DATA_WIDTH/8);
+
+        // Boundary check
+        if ((byte_offset + 3) >= 64) begin
+            `uvm_error("MEM_ACCESS", 
+                    $sformatf("32-bit access crosses boundary at 0x%0h", addr))
+            return 0;
+        end
+
+        // Read 4 consecutive bytes using UVM HDL access
+        foreach (bytes[i]) begin
+            int byte_lane = byte_offset + i;
+            int sram_idx = (bank * 64) + byte_lane;
+            hdl_path = $sformatf("tb_top.VX_wrapper_top.mem_inst.memory_core.sram_array[%0d].mem[%0d]", sram_idx, sram_addr);
+            
+            if (!uvm_hdl_read(hdl_path, bytes[i])) begin
+                `uvm_error("MEM_ACCESS", $sformatf("Failed to read %s", hdl_path))
+                return 0;
+            end
+        end
+
+        return {bytes[3], bytes[2], bytes[1], bytes[0]};
     endfunction
 
-    function void write_mem(int unsigned addr, logic [31:0] data);
-        int bit_select_offset;
-        int address_offset;
-        int translated_addr;
-
-        int word_addr = addr / (`VX_MEM_DATA_WIDTH / 8);
-
-        if (word_addr < region1_size) begin  // Region 1
+    function automatic void write_mem(
+        int unsigned addr, 
+        logic [31:0] data
+    );
+        int translated_addr, bank, sram_addr, byte_offset;
+        logic [7:0] byte_data;
+        string hdl_path;
+        
+        // Same address translation as read_mem
+        int word_addr = addr / (`VX_MEM_DATA_WIDTH/8);
+        
+        if (word_addr < region1_size) begin
             translated_addr = word_addr;
-        end else if (word_addr >= region3_start) begin  // Region 3
+        end else if (word_addr >= region3_start) begin
             translated_addr = word_addr - region3_start + mem_depth - region3_size;
-        end else if (word_addr >= startup_addr && word_addr <= region2_end) begin  // Region 2
+        end else if (word_addr >= startup_addr && word_addr <= region2_end) begin
             translated_addr = word_addr - startup_addr + region1_size;
         end else begin
-            $display("ERROR: Address 0x%h is out of range!", addr);
-            $fatal("Error: Address %h is out of range!", addr);
+            `uvm_error("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
+            return;
         end
 
-        bit_select_offset = (addr % (`VX_MEM_DATA_WIDTH / 8)) * 8;
-        tb_top.VX_wrapper_top.mem_inst.ram[translated_addr][bit_select_offset +: 32] = data;
+        bank = translated_addr[13:12];
+        sram_addr = translated_addr[11:0];
+        byte_offset = addr % (`VX_MEM_DATA_WIDTH/8);
+
+        if ((byte_offset + 3) >= 64) begin
+            `uvm_error("MEM_ACCESS", 
+                    $sformatf("32-bit write crosses boundary at 0x%0h", addr))
+            return;
+        end
+
+        // Write 4 consecutive bytes using UVM HDL access
+        for (int i = 0; i < 4; i++) begin
+            int byte_lane = byte_offset + i;
+            int sram_idx = (bank * 64) + byte_lane;
+            hdl_path = $sformatf("tb_top.VX_wrapper_top.mem_inst.memory_core.sram_array[%0d].mem[%0d]", sram_idx, sram_addr);
+            byte_data = (data >> (i*8)) & 8'hFF;
+            
+            if (!uvm_hdl_deposit(hdl_path, byte_data)) begin
+                `uvm_error("MEM_ACCESS", $sformatf("Failed to write %s", hdl_path))
+                return;
+            end
+        end
+        
     endfunction
     
 endclass
