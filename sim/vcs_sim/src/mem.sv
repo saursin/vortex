@@ -42,7 +42,7 @@ module memory #(
     `endif
         .clk(clk),
         .csb(1'b0),  // Always enabled in this example
-        .web(mem_req_rw[0]), // Assuming single port for this example
+        .web(!mem_req_rw[0]), // Assuming single port for this example
         .wmask(mem_req_byteen[0]),
         .addr(mem_index), // Use your calculated mem_index
         .din(mem_req_data[0]),

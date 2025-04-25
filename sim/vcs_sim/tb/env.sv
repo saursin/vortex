@@ -2,7 +2,6 @@
 `define LOG2DATA_WIDTH $clog2(`VX_MEM_DATA_WIDTH/8);
 import uvm_pkg::*;
 `include "uvm_macros.svh"
-
 class environment;
   
     //virtual interface
@@ -26,6 +25,7 @@ class environment;
     //run task
     task run;
         
+        handle_all_mem_requests();
         $display("Time: %t | Start of simulation", $time);
 
         // Initially make the exit code as 1, to make sure we don't read the default value of 0 as success
@@ -68,7 +68,7 @@ class environment;
                 $display("Time: %t | Completed waiting for busy 0", $time);
         end
         begin
-            #20000000;
+            #2000000;
             $finish;
         end
         join_any
@@ -162,7 +162,7 @@ class environment;
         end else if (word_addr >= startup_addr && word_addr <= region2_end) begin
             translated_addr = word_addr - startup_addr + region1_size;
         end else begin
-            `uvm_error("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
+            `uvm_fatal("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
             return 0;
         end
 
@@ -177,7 +177,7 @@ class environment;
 
         // Boundary check
         if ((byte_offset + 3) >= 64) begin
-            `uvm_error("MEM_ACCESS", 
+            `uvm_fatal("MEM_ACCESS", 
                     $sformatf("32-bit access crosses boundary at 0x%0h", addr))
             return 0;
         end
@@ -189,7 +189,7 @@ class environment;
             hdl_path = $sformatf("tb_top.VX_wrapper_top.mem_inst.memory_core.sram_array[%0d].mem[%0d]", sram_idx, sram_addr);
             
             if (!uvm_hdl_read(hdl_path, bytes[i])) begin
-                `uvm_error("MEM_ACCESS", $sformatf("Failed to read %s", hdl_path))
+                `uvm_fatal("MEM_ACCESS", $sformatf("Failed to read %s", hdl_path))
                 return 0;
             end
         end
@@ -202,12 +202,12 @@ class environment;
         logic [31:0] data
     );
         int translated_addr, bank, sram_addr, byte_offset;
-        logic [7:0] byte_data;
+        logic [7:0] byte_data,test_byte_data;
         string hdl_path;
         
         // Same address translation as read_mem
         int word_addr = addr / (`VX_MEM_DATA_WIDTH/8);
-        
+        $display("Time: %t | write_mem addr %h data %h", $time, addr, data);
         if (word_addr < region1_size) begin
             translated_addr = word_addr;
         end else if (word_addr >= region3_start) begin
@@ -215,7 +215,7 @@ class environment;
         end else if (word_addr >= startup_addr && word_addr <= region2_end) begin
             translated_addr = word_addr - startup_addr + region1_size;
         end else begin
-            `uvm_error("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
+            `uvm_fatal("MEM_ACCESS", $sformatf("Address 0x%0h out of bounds!", addr))
             return;
         end
 
@@ -224,7 +224,7 @@ class environment;
         byte_offset = addr % (`VX_MEM_DATA_WIDTH/8);
 
         if ((byte_offset + 3) >= 64) begin
-            `uvm_error("MEM_ACCESS", 
+            `uvm_fatal("MEM_ACCESS", 
                     $sformatf("32-bit write crosses boundary at 0x%0h", addr))
             return;
         end
@@ -237,11 +237,55 @@ class environment;
             byte_data = (data >> (i*8)) & 8'hFF;
             
             if (!uvm_hdl_deposit(hdl_path, byte_data)) begin
-                `uvm_error("MEM_ACCESS", $sformatf("Failed to write %s", hdl_path))
+                `uvm_fatal("MEM_ACCESS", $sformatf("Failed to write %s", hdl_path))
                 return;
             end
+            if (!uvm_hdl_read(hdl_path, test_byte_data)) begin
+                `uvm_fatal("MEM_ACCESS", $sformatf("Failed to read %s", hdl_path))
+            end
+            $display("Time: %t | write_mem addr %h read data %h write data %h", $time, addr, test_byte_data,byte_data);
+
         end
         
     endfunction
-    
+
+    task automatic handle_all_mem_requests();
+        fork
+            for (int b = 0; b < `VX_MEM_PORTS; b++) begin
+                handle_mem_request_bank(b);
+            end
+        join_none
+    endtask
+
+    task automatic handle_mem_request_bank(input int b);
+        logic [63:0] byte_addr;
+        int cout_file;
+        string file_name;
+        
+        $sformat(file_name, "console_output_%0d.txt", b);
+        cout_file = $fopen(file_name, "a");
+        if (cout_file == 0) begin
+            $fatal("Failed to open output file!");
+        end
+
+        forever begin
+            wait (tb_top.VX_wrapper_top.mem_req_valid[b] && tb_top.VX_wrapper_top.mem_req_ready[b] && tb_top.VX_wrapper_top.mem_req_rw[b]);
+
+            byte_addr = tb_top.VX_wrapper_top.mem_req_addr[b] * `PLATFORM_MEMORY_DATA_SIZE;
+
+            for (int i = 0; i < `PLATFORM_MEMORY_DATA_SIZE; i++) begin
+                if (tb_top.VX_wrapper_top.mem_req_byteen[b][i]) begin
+                    if (byte_addr >= `IO_COUT_ADDR && byte_addr < (`IO_COUT_ADDR + `IO_COUT_SIZE)) begin
+                        // Console output to file
+                        $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[b][i*8 +: 8]);
+                        if (tb_top.VX_wrapper_top.mem_req_data[b][i] == 8'd10) begin
+                            $fwrite(cout_file, "\n");
+                        end
+                    end
+                end
+            end
+            @(posedge vtx_if.clk_rst_intf.clk);
+        end
+    endtask
+
 endclass

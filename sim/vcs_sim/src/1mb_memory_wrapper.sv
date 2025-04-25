@@ -45,19 +45,7 @@ assign bank_csb[3] = csb || (bank_sel != 2'b11);
 wire [7:0] bank_byte_dout [NUM_BANKS-1:0][WRAPPER_NUM_BYTES-1:0];
 wire [WRAPPER_DATA_WIDTH-1:0] bank_dout [NUM_BANKS-1:0];
 
-sram_8_4096_rw_freepdk45 sram_array [TOTAL_SRAMS-1:0] (
-`ifdef USE_POWER_PINS
-    .vdd(vdd), 
-    .gnd(gnd),
-`endif
-    .clk0(clk),
-    .csb0({TOTAL_SRAMS{1'b0}}), // Placeholder, actual connection in generate block
-    .web0({TOTAL_SRAMS{1'b0}}), // Placeholder
-    .wmask0({TOTAL_SRAMS*8{1'b0}}), // Placeholder
-    .addr0({TOTAL_SRAMS*12{1'b0}}), // Placeholder
-    .din0({TOTAL_SRAMS*8{1'b0}}), // Placeholder
-    .dout0() // Actual connection in generate block
-);
+sram_8_4096_rw_freepdk45 sram_array [TOTAL_SRAMS-1:0] ();
 
 generate
     // Iterate over banks and bytes using genvars
@@ -66,16 +54,19 @@ generate
             // Calculate SRAM index from bank and byte
             localparam sram_idx = bank * WRAPPER_NUM_BYTES + byte_idx;
             
-            // Connect SRAM instance
-            assign sram_array[sram_idx].clk0 = clk;
-            assign sram_array[sram_idx].csb0 = bank_csb[bank];
-            assign sram_array[sram_idx].web0 = web;
+            // Individual port connections
+            assign sram_array[sram_idx].clk0   = clk;
+            assign sram_array[sram_idx].csb0   = bank_csb[bank];
+            assign sram_array[sram_idx].web0   = web;
             assign sram_array[sram_idx].wmask0 = {8{wmask[byte_idx]}};
-            assign sram_array[sram_idx].addr0 = bank_addr;
-            assign sram_array[sram_idx].din0 = din[byte_idx*8 +: 8];
-            
-            // Direct assignment using genvars
+            assign sram_array[sram_idx].addr0  = bank_addr;
+            assign sram_array[sram_idx].din0   = din[byte_idx*8 +: 8];
             assign bank_byte_dout[bank][byte_idx] = sram_array[sram_idx].dout0;
+
+            `ifdef USE_POWER_PINS
+                assign sram_array[sram_idx].vdd = vdd;
+                assign sram_array[sram_idx].gnd = gnd;
+            `endif
         end
 
         // Build final bank output
