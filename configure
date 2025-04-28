@@ -39,7 +39,7 @@ detect_osversion() {
                 ;;
             rhel)
                 case "$VERSION_ID" in
-                    8.10) osversion="rhel/8";;
+                    8.10) osversion="ubuntu/focal";;
                     # Add new versions as needed
                 esac
                 ;;

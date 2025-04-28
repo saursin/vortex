@@ -4,13 +4,15 @@ ROOT_DIR := $(realpath ../..)
 RTL_DIR := $(HW_DIR)/rtl
 
 #INCLUDE_FILE_NAME=include.f
-FILELIST_FILE_NAME=filelist.f
+FILELIST_FILE_NAME?=filelist.f
 
 #Defines statement for vcs
 VERILOG_DEFINES:= +define+SIM=1
 VERILOG_DEFINES+= +define+FPU_FPNEW
 VERILOG_DEFINES+= +define+VCS_SIM
 VERILOG_DEFINES+= +define+SIMULATION
+include $(ROOT_DIR)/tapeout_config.mk
+VERILOG_DEFINES+= $(CONFIGS)
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
@@ -73,7 +75,7 @@ vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME}
 	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64 -ntb_opts uvm -debug_access+r+w-memcbk -debug_region+cell -assert disable -kdb\
 	    -debug_access+all -l simulation.log +fsdb +fsdb+all +fsdbfile+./simulation.fsdb $(VERILOG_DEFINES) +testname=$(TESTNAME) \
 		+incdir+sym_links +incdir+sym_links/common_cells -top tb_top +program=../$(PROGRAM)
-		# simv 
+		# simv  
 
 clean:
 	rm -rf WORKSPACE

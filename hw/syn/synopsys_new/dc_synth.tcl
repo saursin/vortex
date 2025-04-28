@@ -7,7 +7,7 @@ set report_dir  "report"
 
 ########################################
 # Library Setup
-set libpath     "$::env(HOME)/opt/pdk/freepdk-45nm"
+set libpath     "/tmp/j33/tools/freepdk45"
 set libname     "stdcells.db"
 
 ########################################
@@ -18,7 +18,7 @@ set rtl_filelist    "sources.f"
 set rtl_sources     {}
 set rtl_incdirs     {}
 set rtl_defines     {}
-set blackbox_modules [list "VX_sp_ram" "VX_dp_ram"]
+#set blackbox_modules [list "VX_sp_ram" "VX_dp_ram"]
 
 set top_module      "Vortex"
 set clk_port        "clk"
@@ -30,7 +30,7 @@ set clk_freq        100
 # Synth Configuration
 
 # Number of parallel jobs (set -1 for all cores)
-set njobs 12
+set njobs 1
 
 # Enable design flattening
 set dc_flatten 0
@@ -119,13 +119,13 @@ analyze -format sverilog $rtl_sources -define $rtl_defines
 elaborate $top_module
 
 # Set blackbox atribute on modules          // FIXME: This is not working
-if { [llength $blackbox_modules] > 0 } {
-    foreach module $blackbox_modules {
-        puts "Setting blackbox attribute for module $module"
-        set_dont_touch "$module"
-        # set_attribute [get_modules $module] blackbox true
-    }
-}
+# if { [llength $blackbox_modules] > 0 } {
+#     foreach module $blackbox_modules {
+#         puts "Setting blackbox attribute for module $module"
+#         set_dont_touch "$module"
+#         # set_attribute [get_modules $module] blackbox true
+#     }
+# }
 
 link
 

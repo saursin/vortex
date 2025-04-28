@@ -45,7 +45,7 @@ assign bank_csb[3] = csb || (bank_sel != 2'b11);
 wire [7:0] bank_byte_dout [NUM_BANKS-1:0][WRAPPER_NUM_BYTES-1:0];
 wire [WRAPPER_DATA_WIDTH-1:0] bank_dout [NUM_BANKS-1:0];
 
-sram_8_4096_rw_freepdk45 sram_array [TOTAL_SRAMS-1:0] ();
+sram_8_4096_rw_freepdk45 #(.VERBOSE(0)) sram_array [TOTAL_SRAMS-1:0] ();
 
 generate
     // Iterate over banks and bytes using genvars
