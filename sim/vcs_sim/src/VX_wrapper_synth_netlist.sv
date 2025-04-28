@@ -420,7 +420,7 @@ module VX_wrapper (
         dcr_wr_data_7_, dcr_wr_data_6_, dcr_wr_data_5_, dcr_wr_data_4_, 
         dcr_wr_data_3_, dcr_wr_data_2_, dcr_wr_data_1_, dcr_wr_data_0_;
         
-    assign mem_req_valid = mem_req_valid_0_;
+    assign mem_req_valid[0] = mem_req_valid_0_;
     assign mem_req_rw[0] = mem_req_rw_0_;
 
     assign mem_req_byteen[0] = {mem_req_byteen_0__63_, mem_req_byteen_0__62_, mem_req_byteen_0__61_, 
