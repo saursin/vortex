@@ -18,7 +18,7 @@
 ../output/sram_8_4096_rw_freepdk45/sram_8_4096_rw_freepdk45.v
 ./src/1mb_memory_wrapper.sv
 ./src/mem.sv
-./src/stdcells.v"
+./src/stdcells.v
 ./src/VX_wrapper_synth_netlist.sv
 ./tb/dcr_if.sv
 ./tb/clk_rst_if.sv
