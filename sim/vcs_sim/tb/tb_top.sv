@@ -34,4 +34,9 @@ module tb_top;
 	$fsdbDumpvars(0, tb_top, "+all");
 	$fsdbDumpMDA();
   end
+
+    // SDF annotation block
+  initial begin
+    $sdf_annotate("/tmp/j33/Vortex_new/vortex/build/hw/syn/synopsys_new/build_Vortex/output/Vortex.syn.sdf", VX_wrapper_top.vortex_inst);
+  end
 endmodule
