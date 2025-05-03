@@ -44,8 +44,17 @@ assign bank_csb[3] = csb || (bank_sel != 2'b11);
 // Array to collect outputs from each bank
 wire [7:0] bank_byte_dout [NUM_BANKS-1:0][WRAPPER_NUM_BYTES-1:0];
 wire [WRAPPER_DATA_WIDTH-1:0] bank_dout [NUM_BANKS-1:0];
+logic  [BANK_SEL_WIDTH-1:0] bank_sel_reg;
 
 sram_8_4096_rw_freepdk45 #(.VERBOSE(0)) sram_array [TOTAL_SRAMS-1:0] ();
+
+always @(posedge clk) begin
+    if(web) begin
+        bank_sel_reg <= bank_sel;
+    end else begin
+        bank_sel_reg <= bank_sel_reg; 
+    end
+end
 
 generate
     // Iterate over banks and bytes using genvars
@@ -77,6 +86,6 @@ generate
 endgenerate
 
 // Output multiplexer based on bank selection
-assign dout = bank_dout[bank_sel];
+assign dout = bank_dout[bank_sel_reg];
 
 endmodule

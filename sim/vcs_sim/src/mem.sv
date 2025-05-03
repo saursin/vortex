@@ -52,6 +52,27 @@ module memory #(
     genvar b;
     generate
         for (b = 0; b < `VX_MEM_PORTS; b++) begin : mem_port
+            always_comb begin
+                if(mem_req_valid[b] && mem_req_ready[b]) begin
+                    if (mem_req_addr[b] < ('h180 / (`VX_MEM_DATA_WIDTH/8))) begin
+                        mem_index = mem_req_addr[b];
+                    end else if (mem_req_addr[b] >= (('hFFFD1FC0)/(`VX_MEM_DATA_WIDTH/8))) begin
+                        mem_index = mem_req_addr[b] - ('hFFFD1FC0)/(`VX_MEM_DATA_WIDTH/8) + MEM_DEPTH - REGION3_SIZE ;
+                    end else if ( mem_req_addr[b] >= (`STARTUP_ADDR /(`VX_MEM_DATA_WIDTH/8)) && mem_req_addr[b] <= REGION2_END) begin
+                        mem_index = mem_req_addr[b] - (`STARTUP_ADDR /(`VX_MEM_DATA_WIDTH/8)) + ('h180 / (`VX_MEM_DATA_WIDTH/8));
+                    end else begin
+                        mem_index = 'h0;
+                        $display("%t Warning: Trying to access address which is not reachable: %h",$time, mem_req_addr[b]);
+                    end                        
+                // Response handling
+                
+                    if (mem_index >= MEM_DEPTH) begin
+                        $display("Error: out of bound mem index");
+                    end
+                end else begin
+                    mem_index = 'h0;
+                end
+            end
             always @(posedge clk) begin
                 if (rst) begin
                     mem_rsp_valid[b] <= 1'b0;
@@ -62,16 +83,6 @@ module memory #(
                     
                     if (mem_req_valid[b] && mem_req_ready[b]) begin
                         // Keep your existing address translation logic
-                        if (mem_req_addr[b] < ('h180 / (`VX_MEM_DATA_WIDTH/8))) begin
-                            mem_index = mem_req_addr[b];
-                        end else if (mem_req_addr[b] >= (('hFFFD1FC0)/(`VX_MEM_DATA_WIDTH/8))) begin
-                            mem_index = mem_req_addr[b] - ('hFFFD1FC0)/(`VX_MEM_DATA_WIDTH/8) + MEM_DEPTH - REGION3_SIZE ;
-                        end else if ( mem_req_addr[b] >= (`STARTUP_ADDR /(`VX_MEM_DATA_WIDTH/8)) && mem_req_addr[b] <= REGION2_END) begin
-                            mem_index = mem_req_addr[b] - (`STARTUP_ADDR /(`VX_MEM_DATA_WIDTH/8)) + ('h180 / (`VX_MEM_DATA_WIDTH/8));
-                        end else begin
-                            mem_rsp_valid[b] <= 1'b0;
-                        end                        
-                        // Response handling
                         if (!mem_req_rw[b]) begin  // Read operation
                             mem_rsp_valid[b] <= 1'b1;
                             mem_rsp_tag[b] <= mem_req_tag[b];
@@ -87,5 +98,24 @@ module memory #(
             end
         end
     endgenerate
-
+    
+    // generate
+    //     for (b = 0; b < `VX_MEM_PORTS; b++) begin : debug_prints
+    //         always_ff @(posedge clk) begin
+    //             if (!rst && mem_req_valid[b] && mem_req_ready[b]) begin
+    //                 if (mem_req_rw[b]) begin
+    //                     $display("[%0t] WRITE: Port %0d, Addr = 0x%h, Data = 0x%h, ByteEn = 0x%h", 
+    //                             $time, b, mem_req_addr[b], mem_req_data[b], mem_req_byteen[b]);
+    //                 end else begin
+    //                     $display("[%0t] READ:  Port %0d, Addr = 0x%h", 
+    //                             $time, b, mem_req_addr[b]);
+    //                 end
+    //             end
+    //             if(!rst && mem_rsp_valid[b] && mem_rsp_ready[b]) begin
+    //                     $display("[%0t] READ:  Port %0d, Data = 0x%h", 
+    //                             $time, b,mem_rsp_data[b]);         
+    //             end
+    //         end
+    //     end
+    // endgenerate
 endmodule

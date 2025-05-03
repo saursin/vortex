@@ -7,12 +7,14 @@ RTL_DIR := $(HW_DIR)/rtl
 FILELIST_FILE_NAME?=filelist.f
 
 #Defines statement for vcs
-VERILOG_DEFINES:= +define+SIM=1
-VERILOG_DEFINES+= +define+FPU_FPNEW
 VERILOG_DEFINES+= +define+VCS_SIM
+VERILOG_DEFINES+= +define+SYNOPSYS
 VERILOG_DEFINES+= +define+SIMULATION
+
 include $(ROOT_DIR)/tapeout_config.mk
-VERILOG_DEFINES+= $(CONFIGS)
+VERILOG_DEFINES+= $(TAPEOUT_DEFINES)
+# include $(ROOT_DIR)/tapeout_config.mk
+# VERILOG_DEFINES+= $(CONFIGS)
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
@@ -72,7 +74,7 @@ coverage:
 # remove assert none later
 vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME} 
 	cd $(WORKSPACE) && \
-	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64 -ntb_opts uvm -debug_access+r+w-memcbk -debug_region+cell -assert disable -kdb\
+	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64 -ntb_opts uvm -assert disable -kdb\
 	    -debug_access+all -l simulation.log +fsdb +fsdb+all +fsdbfile+./simulation.fsdb $(VERILOG_DEFINES) +testname=$(TESTNAME) \
 		+incdir+sym_links +incdir+sym_links/common_cells -top tb_top +program=../$(PROGRAM)
 		# simv  
