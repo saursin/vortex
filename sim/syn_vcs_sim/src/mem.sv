@@ -8,19 +8,19 @@ module memory #(
     input  logic                         rst,
 
     // Memory Request Interface
-    input  logic                                 [`VX_MEM_PORTS] mem_req_valid,
-    output logic                                 [`VX_MEM_PORTS] mem_req_ready,
-    input  logic                                 [`VX_MEM_PORTS] mem_req_rw   ,  // 0: Read, 1: Write
-    input  logic [`VX_MEM_ADDR_WIDTH-1:0]        [`VX_MEM_PORTS] mem_req_addr ,
-    input  logic [`VX_MEM_DATA_WIDTH-1:0]        [`VX_MEM_PORTS] mem_req_data ,
-    input  logic [`VX_MEM_BYTEEN_WIDTH-1:0]      [`VX_MEM_PORTS] mem_req_byteen,
-    input  logic [`VX_MEM_TAG_WIDTH-1:0]         [`VX_MEM_PORTS] mem_req_tag   ,
+    input  logic [`VX_MEM_PORTS]                                 mem_req_valid,
+    output logic [`VX_MEM_PORTS]                                 mem_req_ready,
+    input  logic [`VX_MEM_PORTS]                                 mem_req_rw   ,  // 0: Read, 1: Write
+    input  logic [`VX_MEM_PORTS][`VX_MEM_ADDR_WIDTH-1:0]         mem_req_addr ,
+    input  logic [`VX_MEM_PORTS][`VX_MEM_DATA_WIDTH-1:0]         mem_req_data ,
+    input  logic [`VX_MEM_PORTS][`VX_MEM_BYTEEN_WIDTH-1:0]       mem_req_byteen,
+    input  logic [`VX_MEM_PORTS][`VX_MEM_TAG_WIDTH-1:0]          mem_req_tag   ,
 
     // Memory Response Interface
-    output logic                                 [`VX_MEM_PORTS] mem_rsp_valid,
-    input  logic                                 [`VX_MEM_PORTS] mem_rsp_ready,
-    output logic [`VX_MEM_DATA_WIDTH-1:0]        [`VX_MEM_PORTS] mem_rsp_data ,
-    output logic [`VX_MEM_TAG_WIDTH-1:0]         [`VX_MEM_PORTS] mem_rsp_tag  
+    output logic [`VX_MEM_PORTS]                                 mem_rsp_valid,
+    input  logic [`VX_MEM_PORTS]                                 mem_rsp_ready,
+    output logic [`VX_MEM_PORTS][`VX_MEM_DATA_WIDTH-1:0]         mem_rsp_data ,
+    output logic [`VX_MEM_PORTS][`VX_MEM_TAG_WIDTH-1:0]          mem_rsp_tag  
 );
 
     // Internal RAM storage 1 MB

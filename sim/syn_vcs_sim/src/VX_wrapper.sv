@@ -14,18 +14,18 @@ module VX_wrapper (
 );
 
     // Internal Memory Interface
-    wire                            [`VX_MEM_PORTS]  mem_req_valid ;
-    wire                            [`VX_MEM_PORTS] mem_req_rw;
-    wire [`VX_MEM_BYTEEN_WIDTH-1:0] [`VX_MEM_PORTS]  mem_req_byteen;
-    wire [`VX_MEM_ADDR_WIDTH-1:0]   [`VX_MEM_PORTS] mem_req_addr;
-    wire [`VX_MEM_DATA_WIDTH-1:0]   [`VX_MEM_PORTS] mem_req_data;
-    wire [`VX_MEM_TAG_WIDTH-1:0]    [`VX_MEM_PORTS] mem_req_tag;
-    wire                            [`VX_MEM_PORTS] mem_req_ready;
+    wire [`VX_MEM_PORTS]                             mem_req_valid ;
+    wire [`VX_MEM_PORTS]                            mem_req_rw;
+    wire [`VX_MEM_PORTS][`VX_MEM_BYTEEN_WIDTH-1:0]   mem_req_byteen;
+    wire [`VX_MEM_PORTS][`VX_MEM_ADDR_WIDTH-1:0]    mem_req_addr;
+    wire [`VX_MEM_PORTS][`VX_MEM_DATA_WIDTH-1:0]    mem_req_data;
+    wire [`VX_MEM_PORTS][`VX_MEM_TAG_WIDTH-1:0]     mem_req_tag;
+    wire [`VX_MEM_PORTS]                            mem_req_ready;
 
-    wire                            [`VX_MEM_PORTS] mem_rsp_valid;
-    wire [`VX_MEM_DATA_WIDTH-1:0]   [`VX_MEM_PORTS] mem_rsp_data;
-    wire [`VX_MEM_TAG_WIDTH-1:0]    [`VX_MEM_PORTS] mem_rsp_tag;
-    wire                            [`VX_MEM_PORTS] mem_rsp_ready;
+    wire [`VX_MEM_PORTS]                            mem_rsp_valid;
+    wire [`VX_MEM_PORTS][`VX_MEM_DATA_WIDTH-1:0]    mem_rsp_data;
+    wire [`VX_MEM_PORTS][`VX_MEM_TAG_WIDTH-1:0]     mem_rsp_tag;
+    wire [`VX_MEM_PORTS]                            mem_rsp_ready;
 
     // Instantiate Vortex
     Vortex vortex_inst (
