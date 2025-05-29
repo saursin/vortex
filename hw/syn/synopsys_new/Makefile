@@ -14,6 +14,8 @@ RMDIR = rm -rf
 ECHO = @echo
 
 BUILD_DIR := $(PREFIX)_$(TOP_LEVEL_ENTITY)
+$(shell mkdir -p $(BUILD_DIR))
+
 BIN_DIR := $(BUILD_DIR)/bin
 
 # control RTL debug tracing states
@@ -76,15 +78,27 @@ CFLAGS += -DXLEN_$(XLEN)
 CFLAGS += $(CONFIGS)
 CFLAGS += $(RTL_INCLUDE)
 
+SHELL := /bin/bash
+
 ################################################################################
 .PHONY: gen-sources
 gen-sources: $(BUILD_DIR)/sources.f
 $(BUILD_DIR)/sources.f:
 	mkdir -p $(BUILD_DIR); cd $(BUILD_DIR); $(SCRIPT_DIR)/gen_sources.sh -P $(CFLAGS) -Csrc -Osources.f
+	python3 $(VORTEX_HOME)/hw/syn/synopsys_new/process_filelist.py $(BUILD_DIR)/sources.f $(BUILD_DIR)/sources.f
 
 .PHONY: gen-mem
-gen-mem:
-	$(VORTEX_HOME)/hw/syn/synopsys_new/gen_mem.py -j $(VORTEX_HOME)/hw/syn/synopsys_new/mems.json -b $(BUILD_DIR)
+gen-mem: 
+	python3 $(VORTEX_HOME)/hw/syn/synopsys_new/log2json.py $(VORTEX_HOME)/ram_inst.log $(BUILD_DIR)/ram_inst.json
+	source $(VORTEX_HOME)/../openram/sourceme.sh; \
+		python3 $(VORTEX_HOME)/hw/syn/synopsys_new/gen_memories.py $(BUILD_DIR)/ram_inst.json --out-dir $(BUILD_DIR)/macros
+
+# $(BUILD_DIR)/sources_new.f: $(BUILD_DIR)/sources.f
+# 	python3 $(VORTEX_HOME)/hw/syn/synopsys_new/gen_mems.py -j $(VORTEX_HOME)/hw/syn/synopsys_new/mems.json -b $(BUILD_DIR)/macros
+
+# verilator --xml-only -f $(BUILD_DIR)/sources.f -Mdir $(BUILD_DIR)/vobj
+	
+# $(VORTEX_HOME)/hw/syn/synopsys_new/gen_mem.py -j $(VORTEX_HOME)/hw/syn/synopsys_new/mems.json -b $(BUILD_DIR)
 
 .PHONY: synth
 synth: $(BUILD_DIR)/sources.f

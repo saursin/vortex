@@ -98,6 +98,12 @@ module VX_sp_ram #(
     `STATIC_ASSERT((RDW_MODE == "R" || RDW_MODE == "W" || RDW_MODE == "N"), ("invalid parameter"))
     `UNUSED_PARAM (RDW_ASSERT)
 
+    initial begin
+        // Print all parameters
+        $display("{\"type\": \"VX_sp_ram\", \"hier\": \"%m\", \"params\": {\"DATAW\": %0d, \"SIZE\": %0d, \"WRENW\": %0d, \"OUT_REG\": %0d, \"LUTRAM\": %0d, \"RDW_MODE\": \"%s\", \"RADDR_REG\": %0d, \"RADDR_RESET\": %0d, \"RDW_ASSERT\": %0d, \"RESET_RAM\": %0d, \"INIT_ENABLE\": %0d, \"INIT_FILE\": \"%s\", \"INIT_VALUE\": %0d}}", 
+                                                                  DATAW,        SIZE,        WRENW,        OUT_REG,        LUTRAM,        RDW_MODE,         RADDR_REG,        RADDR_RESET,        RDW_ASSERT,        RESET_RAM,        INIT_ENABLE,        INIT_FILE,         INIT_VALUE);
+    end
+
 `ifdef SYNTHESIS
     localparam FORCE_BRAM = !LUTRAM && `FORCE_BRAM(SIZE, DATAW);
     if (OUT_REG) begin : g_sync
