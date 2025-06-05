@@ -1,5 +1,7 @@
 ROOT_DIR := $(realpath ../../..)
-include $(ROOT_DIR)/config.mk
+#include $(ROOT_DIR)/config.mk
+
+VORTEX_HOME:= $(ROOT_DIR)
 
 SRC_DIR := $(VORTEX_HOME)/hw/syn/yosys
 
@@ -33,6 +35,7 @@ DBG_SCOPE_FLAGS += -DDBG_SCOPE_LSU
 
 ################################################################################
 include $(VORTEX_HOME)/tapeout_config.mk
+include $(VORTEX_HOME)/config.mk.in
 ################################################################################
 
 ifdef NUM_CORES

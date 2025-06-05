@@ -26,15 +26,11 @@
         end \
     end
 
-`ifdef SIMULATION
     `define RAM_RESET_BLOCK if (RESET_RAM && reset) begin \
                                 for (integer i = 0; i < SIZE; ++i) begin \
                                     ram[i] <= DATAW'(INIT_VALUE); \
                                 end \
                             end else
-`else
-    `define RAM_RESET_BLOCK
-`endif
 
 `define RAM_WRITE_ALL   `RAM_RESET_BLOCK \
                         if (write) begin \
