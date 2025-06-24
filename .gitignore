@@ -3,3 +3,5 @@
 *.cache
 *.code-workspace
 WORKSPACE/
+WORK/
+build_Vortex/
