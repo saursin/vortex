@@ -1,0 +1,461 @@
+[
+  {
+    "type": "VX_sp_ram",
+    "params": {
+      "DATAW": 2,
+      "SIZE": 64,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_repl.g_enable.g_fifo.fifo_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_repl.g_enable.g_fifo.fifo_store"
+    ]
+  },
+  {
+    "type": "VX_sp_ram",
+    "params": {
+      "DATAW": 21,
+      "SIZE": 64,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[0].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[1].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[2].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[3].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[0].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[1].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[2].tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_tags.g_tag_store[3].tag_store"
+    ]
+  },
+  {
+    "type": "VX_sp_ram",
+    "params": {
+      "DATAW": 512,
+      "SIZE": 64,
+      "WRENW": 64,
+      "OUT_REG": 1,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[0].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[1].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[2].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[3].data_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 339,
+      "SIZE": 16,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_mshr.mshr_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 560,
+      "SIZE": 4,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 1,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_mem_rsp_queue[0].mem_rsp_queue.g_ebN.fifo_queue.g_depth_n.dp_ram"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 654,
+      "SIZE": 4,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 1,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.dcache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.mem_req_queue.g_depth_n.dp_ram"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 39,
+      "SIZE": 4,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 1,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.fetch.tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.fetch.tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.fetch.tag_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.fetch.tag_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 256,
+      "SIZE": 64,
+      "WRENW": 32,
+      "OUT_REG": 1,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[0].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[1].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[2].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[3].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[0].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[1].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[2].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[3].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[0].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[1].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[2].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[3].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[0].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[1].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[2].gpr_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.operands.g_gpr_rams[3].gpr_ram"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 151,
+      "SIZE": 4,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 1,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[0].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[1].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[2].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[3].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[0].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[1].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[2].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[3].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[0].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[1].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[2].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[3].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[0].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[1].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[2].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.issue.g_slices[0].issue_slice.ibuffer.g_instr_bufs[3].instr_buf.g_ebN.fifo_queue.g_depth_n.dp_ram"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 33,
+      "SIZE": 8,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.g_enabled.g_coalescers[0].mem_coalescer.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.g_enabled.g_coalescers[0].mem_coalescer.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.g_enabled.g_coalescers[0].mem_coalescer.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.g_enabled.g_coalescers[0].mem_coalescer.req_ibuf.data_table"
+    ]
+  },
+  {
+    "type": "VX_sp_ram",
+    "params": {
+      "DATAW": 32,
+      "SIZE": 512,
+      "WRENW": 4,
+      "OUT_REG": 1,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[0].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[1].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[2].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[3].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[4].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[5].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[6].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.mem_unit.local_mem.g_data_store[7].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[0].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[1].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[2].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[3].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[4].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[5].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[6].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.mem_unit.local_mem.g_data_store[7].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[0].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[1].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[2].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[3].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[4].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[5].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[6].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.mem_unit.local_mem.g_data_store[7].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[0].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[1].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[2].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[3].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[4].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[5].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[6].lmem_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.mem_unit.local_mem.g_data_store[7].lmem_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 79,
+      "SIZE": 7,
+      "WRENW": 1,
+      "OUT_REG": 1,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.schedule.split_join.g_ipdom_stacks[0].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.schedule.split_join.g_ipdom_stacks[1].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.schedule.split_join.g_ipdom_stacks[2].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.schedule.split_join.g_ipdom_stacks[3].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.schedule.split_join.g_ipdom_stacks[0].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.schedule.split_join.g_ipdom_stacks[1].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.schedule.split_join.g_ipdom_stacks[2].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.schedule.split_join.g_ipdom_stacks[3].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.schedule.split_join.g_ipdom_stacks[0].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.schedule.split_join.g_ipdom_stacks[1].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.schedule.split_join.g_ipdom_stacks[2].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.schedule.split_join.g_ipdom_stacks[3].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.schedule.split_join.g_ipdom_stacks[0].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.schedule.split_join.g_ipdom_stacks[1].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.schedule.split_join.g_ipdom_stacks[2].ipdom_stack.ipdom_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.schedule.split_join.g_ipdom_stacks[3].ipdom_stack.ipdom_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 63,
+      "SIZE": 2,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.execute.lsu_unit.g_slices[0].lsu_slice.mem_scheduler.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.execute.lsu_unit.g_slices[0].lsu_slice.mem_scheduler.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.execute.lsu_unit.g_slices[0].lsu_slice.mem_scheduler.req_ibuf.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.execute.lsu_unit.g_slices[0].lsu_slice.mem_scheduler.req_ibuf.data_table"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 94,
+      "SIZE": 2,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[0].core.execute.fpu_unit.g_fpus[0].tag_store.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[1].core.execute.fpu_unit.g_fpus[0].tag_store.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[2].core.execute.fpu_unit.g_fpus[0].tag_store.data_table",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.g_cores[3].core.execute.fpu_unit.g_fpus[0].tag_store.data_table"
+    ]
+  },
+  {
+    "type": "VX_sp_ram",
+    "params": {
+      "DATAW": 512,
+      "SIZE": 64,
+      "WRENW": 1,
+      "OUT_REG": 1,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 0,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[0].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[1].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[2].data_store",
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_data.g_data_store[3].data_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 89,
+      "SIZE": 16,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "R",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 0,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.cache_mshr.mshr_store"
+    ]
+  },
+  {
+    "type": "VX_dp_ram",
+    "params": {
+      "DATAW": 652,
+      "SIZE": 4,
+      "WRENW": 1,
+      "OUT_REG": 0,
+      "LUTRAM": 0,
+      "RDW_MODE": "W",
+      "RADDR_REG": 1,
+      "RADDR_RESET": 1,
+      "RDW_ASSERT": 0,
+      "RESET_RAM": 1,
+      "INIT_ENABLE": 0,
+      "INIT_FILE": "",
+      "INIT_VALUE": 0
+    },
+    "hiers": [
+      "tb_top.VX_wrapper_top.vortex_inst.g_clusters[0].cluster.g_sockets[0].socket.icache.g_cache_wrap[0].cache_wrap.g_cache.cache.g_banks[0].bank.mem_req_queue.g_depth_n.dp_ram"
+    ]
+  }
+]

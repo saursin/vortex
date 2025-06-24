@@ -1,33 +1,53 @@
 #You should be in the "vcs_sim/" directory
 ROOT_DIR := $(realpath ../..)
+VORTEX_HOME := $(realpath ../..)
 
 RTL_DIR := $(HW_DIR)/rtl
 
-#INCLUDE_FILE_NAME=include.f
-FILELIST_FILE_NAME=filelist.f
+FILELIST_FILE_NAME=filelist_syn.f
+
+include $(VORTEX_HOME)/tapeout_config.mk
+include $(VORTEX_HOME)/config.mk.in
 
 SIM=1
 SDF=0
 
 #Defines statement for vcs
 VERILOG_DEFINES:= 
-ifeq ($(SIM), 1)
-		VERILOG_DEFINES := $(VERILOG_DEFINES)+SIM=1
+ifeq ($(SIM),1)
+		VERILOG_DEFINES := $(VERILOG_DEFINES)+define+SIM=1
 endif
-ifeq ($(SDF), 1)
-		VERILOG_DEFINES := $(VERILOG_DEFINES)+SDF=1
+ifeq ($(SDF),1)
+		VERILOG_DEFINES := $(VERILOG_DEFINES)+define+SDF=1
 endif
-# VERILOG_DEFINES+= +define+FPU_FPNEW
-# VERILOG_DEFINES+= +define+VCS_SIM
-# VERILOG_DEFINES+= +define+SIMULATION
 
+VERILOG_DEFINES+= $(TAPEOUT_DEFINES)
+VERILOG_DEFINES+= +define+VCS_SIM
+VERILOG_DEFINES+= +define+SIMULATION
+VERILOG_DEFINES+= +define+SYNTHESIS
+VERILOG_DEFINES+= +define+SYNOPSYS
+#Fast simulation flag for memory model
+VERILOG_DEFINES += +define+UNIT_DELAY
+#Disables warning messages from the memory model
+VERILOG_DEFINES += +define+no_warning
+#Define for debug print statements for main memory
+# VERILOG_DEFINES+= +define+DEBUG_MEM
+
+#Define to replace mem coalescer data table with compiled sram !!!NOT WORKING!!!
+# VERILOG_DEFINES += +define+DTABLE_SRAM
+#Define to replace cache tag store with compiled sram !!NOT WORKING!!
+# VERILOG_DEFINES += +define+CACHE_TAG_STORE_SRAM
+#Define to replace cache fifo store with compiled sram !!(MAYBE) WORKING!!
+# VERILOG_DEFINES += +define+CACHE_FIFO_STORE_SRAM
+#Define to replace cache mshr store with compiled sram !!NOT WORKING!!
+# VERILOG_DEFINES += +define+CACHE_MSHR_STORE_SRAM
 
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
 WORKSPACE = $(CURRENT_DIR)/WORKSPACE
 TESTNAME :=
-PROGRAM ?= program_files/riscadd.mem
+PROGRAM ?= program_files/conform.mem
 
 #INCLUDE_DIRS :=
 help:
@@ -77,14 +97,17 @@ coverage:
 	cd $(WORKSPACE) && \
 	verdi -cov -covdir simv.vdb&
 
-# +lint=all -kdb 		-timescale=1ns/10ps -debug_acc+pp+dmptf -debug_region+cell+encrypt 
+# +lint=all -kdb 		-timescale=1ns/10ps -debug_acc+pp+dmptf -debug_region+cell+encrypt +incdir+sym_links +incdir+sym_links/common_cells +lint=all
 # remove assert none later
-vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME} 
+#+neg_tchk
+vcs: ./Include/${FILELIST_FILE_NAME} 
 	cd $(WORKSPACE) && \
-	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64 -timescale=1ns/1ps -assert disable -kdb\
-	    -debug_access+all -l simulation.log +fsdb +fsdb+all +fsdbfile+./simulation.fsdb $(VERILOG_DEFINES) +testname=$(TESTNAME) \
-		+incdir+sym_links +incdir+sym_links/common_cells -top tb_top +program=../$(PROGRAM)
-		# simv 
+	vcs -file sym_links/sim_no_path.include +v2k -R -sverilog -full64 \
+		-timescale=1ns/10ps -assert disable -kdb -debug_access+all -debug_acc+pp+dmptf -debug_region+cell+encrypt -l simulation.log +fsdb +fsdb+all +fsdbfile+./simulation.fsdb $(VERILOG_DEFINES) +testname=$(TESTNAME) \
+		-top tb_top +program=../$(PROGRAM) +incdir+sym_links +incdir+sym_links/common_cells \
+		-lca -kdb \
+		+sdfverbose 
+		# simv
 
 clean:
 	rm -rf WORKSPACE

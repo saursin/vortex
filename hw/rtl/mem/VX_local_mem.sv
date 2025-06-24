@@ -162,22 +162,37 @@ module VX_local_mem import VX_gpu_pkg::*; #(
     for (genvar i = 0; i < NUM_BANKS; ++i) begin : g_data_store
         wire bank_rsp_valid, bank_rsp_ready;
 
-        VX_sp_ram #(
-            .DATAW (WORD_WIDTH),
-            .SIZE  (WORDS_PER_BANK),
-            .WRENW (WORD_SIZE),
-            .OUT_REG (1),
-            .RDW_MODE ("R")
-        ) lmem_store (
-            .clk   (clk),
-            .reset (reset),
-            .read  (per_bank_req_valid[i] && per_bank_req_ready[i] && ~per_bank_req_rw[i]),
-            .write (per_bank_req_valid[i] && per_bank_req_ready[i] && per_bank_req_rw[i]),
-            .wren  (per_bank_req_byteen[i]),
-            .addr  (per_bank_req_addr[i]),
-            .wdata (per_bank_req_data[i]),
-            .rdata (per_bank_rsp_data[i])
-        );
+        `ifdef LMEM_SRAM
+            lmem_store_sram #(
+                .WRENW (WORD_SIZE)
+            ) lmem_store (
+                .clk   (clk),
+                .reset (reset),
+                .read  (per_bank_req_valid[i] && per_bank_req_ready[i] && ~per_bank_req_rw[i]),
+                .write (per_bank_req_valid[i] && per_bank_req_ready[i] && per_bank_req_rw[i]),
+                .wren  (per_bank_req_byteen[i]),
+                .addr  (per_bank_req_addr[i]),
+                .wdata (per_bank_req_data[i]),
+                .rdata (per_bank_rsp_data[i])
+            );
+        `else
+            VX_sp_ram #(
+                .DATAW (WORD_WIDTH),
+                .SIZE  (WORDS_PER_BANK),
+                .WRENW (WORD_SIZE),
+                .OUT_REG (1),
+                .RDW_MODE ("R")
+            ) lmem_store (
+                .clk   (clk),
+                .reset (reset),
+                .read  (per_bank_req_valid[i] && per_bank_req_ready[i] && ~per_bank_req_rw[i]),
+                .write (per_bank_req_valid[i] && per_bank_req_ready[i] && per_bank_req_rw[i]),
+                .wren  (per_bank_req_byteen[i]),
+                .addr  (per_bank_req_addr[i]),
+                .wdata (per_bank_req_data[i]),
+                .rdata (per_bank_rsp_data[i])
+            );
+        `endif
 
         // read-during-write hazard detection
         reg [BANK_ADDR_WIDTH-1:0] last_wr_addr;

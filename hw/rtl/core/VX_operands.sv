@@ -262,26 +262,40 @@ module VX_operands import VX_gpu_pkg::*; #(
             assign wren[i*XLEN_SIZE+:XLEN_SIZE] = {XLEN_SIZE{writeback_if.data.tmask[i]}};
         end
 
-        VX_dp_ram #(
-            .DATAW (REGS_DATAW),
-            .SIZE  (PER_BANK_REGS * PER_ISSUE_WARPS),
-            .WRENW (BYTEENW),
-         `ifdef GPR_RESET
-            .RESET_RAM (1),
-         `endif
-            .OUT_REG (1),
-            .RDW_MODE ("R")
-        ) gpr_ram (
-            .clk   (clk),
-            .reset (reset),
-            .read  (pipe_fire_st1),
-            .wren  (wren),
-            .write (gpr_wr_enabled),
-            .waddr (gpr_wr_addr),
-            .wdata (writeback_if.data.data),
-            .raddr (gpr_rd_addr_st1[b]),
-            .rdata (gpr_rd_data_st2[b])
-        );
+        `ifdef GPR_SRAM
+            gpr_ram_sram gpr_ram (
+                .clk   (clk),
+                .reset (reset),
+                .read  (pipe_fire_st1),
+                .wren  (wren),
+                .write (gpr_wr_enabled),
+                .waddr (gpr_wr_addr),
+                .wdata (writeback_if.data.data),
+                .raddr (gpr_rd_addr_st1[b]),
+                .rdata (gpr_rd_data_st2[b])
+            );
+        `else
+            VX_dp_ram #(
+                .DATAW (REGS_DATAW),
+                .SIZE  (PER_BANK_REGS * PER_ISSUE_WARPS),
+                .WRENW (BYTEENW),
+            `ifdef GPR_RESET
+                .RESET_RAM (1),
+            `endif
+                .OUT_REG (1),
+                .RDW_MODE ("R")
+            ) gpr_ram (
+                .clk   (clk),
+                .reset (reset),
+                .read  (pipe_fire_st1),
+                .wren  (wren),
+                .write (gpr_wr_enabled),
+                .waddr (gpr_wr_addr),
+                .wdata (writeback_if.data.data),
+                .raddr (gpr_rd_addr_st1[b]),
+                .rdata (gpr_rd_data_st2[b])
+            );
+        `endif
     end
 
 `ifdef PERF_ENABLE

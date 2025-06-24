@@ -121,22 +121,37 @@ module VX_cache_data #(
 
         wire line_read = read || ((fill || flush) && WRITEBACK);
 
-        VX_sp_ram #(
-            .DATAW (`CS_LINE_WIDTH),
-            .SIZE  (`CS_LINES_PER_BANK),
-            .WRENW (WRENW),
-            .OUT_REG (1),
-            .RDW_MODE ("R")
-        ) data_store (
-            .clk   (clk),
-            .reset (reset),
-            .read  (line_read),
-            .write (line_write),
-            .wren  (line_wren),
-            .addr  (line_idx),
-            .wdata (line_wdata),
-            .rdata (line_rdata[i])
-        );
+        `ifdef CACHE_DATA_STORE_SRAM
+            cache_data_store_sram #(
+                .WRENW (WRENW)
+            ) data_store (
+                .clk   (clk),
+                .reset (reset),
+                .read  (line_read),
+                .write (line_write),
+                .wren  (line_wren),
+                .addr  (line_idx),
+                .wdata (line_wdata),
+                .rdata (line_rdata[i])
+            );
+        `else
+            VX_sp_ram #(
+                .DATAW (`CS_LINE_WIDTH),
+                .SIZE  (`CS_LINES_PER_BANK),
+                .WRENW (WRENW),
+                .OUT_REG (1),
+                .RDW_MODE ("R")
+            ) data_store (
+                .clk   (clk),
+                .reset (reset),
+                .read  (line_read),
+                .write (line_write),
+                .wren  (line_wren),
+                .addr  (line_idx),
+                .wdata (line_wdata),
+                .rdata (line_rdata[i])
+            );
+        `endif
     end
 
     assign read_data = line_rdata[way_idx_r];
