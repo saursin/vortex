@@ -7,8 +7,8 @@ module tb_top;
   vortex_wrapper_if vtx_intf();
 
   initial begin 
-	vtx_intf.clk_rst_intf.clk = 0;
-	vtx_intf.clk_rst_intf.rst = 0;
+    vtx_intf.clk_rst_intf.clk = 0;
+    vtx_intf.clk_rst_intf.rst = 0;
   end
 
   always #5 vtx_intf.clk_rst_intf.clk = ~vtx_intf.clk_rst_intf.clk;
@@ -16,22 +16,30 @@ module tb_top;
   test basic_test(vtx_intf);
   
   VX_wrapper VX_wrapper_top (
-		`SCOPE_IO_BIND  (1)
+        `SCOPE_IO_BIND  (1)
 
-		.clk			(vtx_intf.clk_rst_intf.clk),
-		.reset			(vtx_intf.clk_rst_intf.rst),
+        .clk  		(vtx_intf.clk_rst_intf.clk),
+        .reset		(vtx_intf.clk_rst_intf.rst),
 
-		.dcr_wr_valid	(vtx_intf.dcr_intf.dcr_wr_valid),
-		.dcr_wr_addr	(vtx_intf.dcr_intf.dcr_wr_addr),
-		.dcr_wr_data	(vtx_intf.dcr_intf.dcr_wr_data),
+        // .dcr_wr_valid    (vtx_intf.dcr_intf.dcr_wr_valid),
+        // .dcr_wr_addr    (vtx_intf.dcr_intf.dcr_wr_addr),
+        // .dcr_wr_data    (vtx_intf.dcr_intf.dcr_wr_data),
 
-		.busy			(vtx_intf.busy)
-	);
+		// Scan Chain
+        .scan_in    (vtx_intf.scan_intf.scan_in),
+        .update     (vtx_intf.scan_intf.update),
+        .capture    (vtx_intf.scan_intf.capture),
+        .phi        (vtx_intf.scan_intf.phi),
+        .phi_bar    (vtx_intf.scan_intf.phi_bar),
+        .scan_out   (vtx_intf.scan_intf.scan_out),
+
+        .busy       (vtx_intf.busy)
+    );
   
   //enabling the wave dump
   initial begin 
-	$fsdbDumpfile("simulation.fsdb");
-	$fsdbDumpvars(0, tb_top, "+all");
-	$fsdbDumpMDA();
+    $fsdbDumpfile("simulation.fsdb");
+    $fsdbDumpvars(0, tb_top, "+all");
+    $fsdbDumpMDA();
   end
 endmodule

@@ -29,7 +29,8 @@ VERILOG_DEFINES+= $(TAPEOUT_DEFINES)
 
 .DEFAULT_GOAL := run_and_view
 CURRENT_DIR := $(shell pwd)
-WORKSPACE = $(CURRENT_DIR)/WORKSPACE
+WORKSPACE_NAME ?= WORKSPACE
+WORKSPACE := $(CURRENT_DIR)/$(WORKSPACE_NAME)
 TESTNAME :=
 PROGRAM ?= program_files/fibonacci.mem
 
@@ -95,5 +96,5 @@ vcs: ./Include/${FILELIST_FILE_NAME} #./Include/${INCLUDE_FILE_NAME}
 		# simv 
 
 clean:
-	rm -rf WORKSPACE
+	rm -rf $(WORKSPACE)
 

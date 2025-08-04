@@ -2,7 +2,7 @@ import os
 import re
 import sys
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
     print("Usage: python3 link_files.py <include_file_location>")
     sys.exit(1)
 
@@ -11,7 +11,7 @@ input_file = "Include/" + sys.argv[1]
 print("looking in file " + input_file)
 
 # Ensure WORKSPACE and sym_links directories exist
-workspace_dir = "WORKSPACE"
+workspace_dir = sys.argv[2]
 sym_links_dir = os.path.join(workspace_dir, "sym_links")
 os.makedirs(sym_links_dir, exist_ok=True)
 

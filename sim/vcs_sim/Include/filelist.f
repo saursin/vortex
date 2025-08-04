@@ -248,30 +248,35 @@
 /home/sathe/usr/jbeiler/vortex_tapeout/vortex/hw/syn/synopsys_65/build_Vortex/src/VX_fpu_ncp.sv
 /home/sathe/usr/jbeiler/vortex_tapeout/vortex/hw/syn/synopsys_65/build_Vortex/src/VX_fpu_sqrt.sv
 // Third party Design files
-// ../../third_party/cvfpu/src/fpnew_top.sv
-// ../../third_party/cvfpu/src/common_cells/src/rr_arb_tree.sv
-// ../../third_party/cvfpu/src/fpnew_opgroup_block.sv
-// ../../third_party/cvfpu/src/fpnew_opgroup_fmt_slice.sv
-// ../../third_party/cvfpu/src/fpnew_opgroup_multifmt_slice.sv
-// ../../third_party/cvfpu/src/common_cells/src/lzc.sv
-// ../../third_party/cvfpu/src/fpnew_fma.sv
-// ../../third_party/cvfpu/src/fpnew_classifier.sv
-// ../../third_party/cvfpu/src/fpnew_rounding.sv
-// ../../third_party/cvfpu/src/fpnew_noncomp.sv
-// ../../third_party/cvfpu/src/fpnew_divsqrt_multi.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/div_sqrt_top_mvp.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/norm_div_sqrt_mvp.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/nrbd_nrsc_mvp.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/preprocess_mvp.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/control_mvp.sv
-// ../../third_party/cvfpu/src/fpnew_cast_multi.sv
-// ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/iteration_div_sqrt_mvp.sv
-// Testbench and vcs simulation related files
+../../third_party/cvfpu/src/fpnew_top.sv
+../../third_party/cvfpu/src/common_cells/src/rr_arb_tree.sv
+../../third_party/cvfpu/src/fpnew_opgroup_block.sv
+../../third_party/cvfpu/src/fpnew_opgroup_fmt_slice.sv
+../../third_party/cvfpu/src/fpnew_opgroup_multifmt_slice.sv
+../../third_party/cvfpu/src/common_cells/src/lzc.sv
+../../third_party/cvfpu/src/fpnew_fma.sv
+../../third_party/cvfpu/src/fpnew_classifier.sv
+../../third_party/cvfpu/src/fpnew_rounding.sv
+../../third_party/cvfpu/src/fpnew_noncomp.sv
+../../third_party/cvfpu/src/fpnew_divsqrt_multi.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/div_sqrt_top_mvp.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/norm_div_sqrt_mvp.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/nrbd_nrsc_mvp.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/preprocess_mvp.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/control_mvp.sv
+../../third_party/cvfpu/src/fpnew_cast_multi.sv
+../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/iteration_div_sqrt_mvp.sv
+// Mem and Vortex wrapper design files
 ./src/mem.sv
 ./src/VX_wrapper.sv
+// Scan related files
+./src/vortex_sc_wrapper.sv
+./src/scan_cell.sv
+//Testbench files
 ./tb/dcr_if.sv
 ./tb/clk_rst_if.sv
 ./tb/vortex_wrapper_if.sv
 ./tb/tb_top.sv
 ./tb/env.sv
+./tb/scan_if.sv
 ./tb/test.sv
