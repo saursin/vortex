@@ -185,7 +185,8 @@
 ../../third_party/cvfpu/src/fpnew_cast_multi.sv
 ../../third_party/cvfpu/src/fpu_div_sqrt_mvp/hdl/iteration_div_sqrt_mvp.sv
 // Testbench and vcs simulation related files
-../output/sram_8_4096_rw_freepdk45/sram_8_4096_rw_freepdk45.v
+//../output/sram_8_4096_rw_freepdk45/sram_8_4096_rw_freepdk45.v
+./src/sram_8_4096_rw_freepdk45.v
 ./src/1mb_memory_wrapper.sv
 ./src/mem.sv
 ./src/VX_wrapper.sv
