@@ -13,10 +13,10 @@ module sram_wrapper_512x16384 (
 );
 
 parameter WRAPPER_DATA_WIDTH = 512;
-parameter WRAPPER_ADDR_WIDTH = 14;
+parameter WRAPPER_ADDR_WIDTH = 15;
 parameter WRAPPER_NUM_BYTES = WRAPPER_DATA_WIDTH / 8;  // 64 bytes
-parameter NUM_BANKS = 4;
-parameter BANK_SEL_WIDTH = 2;
+parameter NUM_BANKS = 8;
+parameter BANK_SEL_WIDTH = 3;
 parameter TOTAL_SRAMS = NUM_BANKS * WRAPPER_NUM_BYTES; 
 
 `ifdef USE_POWER_PINS
@@ -31,15 +31,19 @@ input [WRAPPER_ADDR_WIDTH-1:0] addr;
 input [WRAPPER_DATA_WIDTH-1:0] din;
 output [WRAPPER_DATA_WIDTH-1:0] dout;
 
-wire [BANK_SEL_WIDTH-1:0] bank_sel = addr[13:12];
+wire [BANK_SEL_WIDTH-1:0] bank_sel = addr[14:12];
 wire [11:0] bank_addr = addr[11:0];
 
 // Bank chip select signals
 wire [NUM_BANKS-1:0] bank_csb;
-assign bank_csb[0] = csb || (bank_sel != 2'b00);
-assign bank_csb[1] = csb || (bank_sel != 2'b01);
-assign bank_csb[2] = csb || (bank_sel != 2'b10);
-assign bank_csb[3] = csb || (bank_sel != 2'b11);
+assign bank_csb[0] = csb || (bank_sel != 3'b000);
+assign bank_csb[1] = csb || (bank_sel != 3'b001);
+assign bank_csb[2] = csb || (bank_sel != 3'b010);
+assign bank_csb[3] = csb || (bank_sel != 3'b011);
+assign bank_csb[4] = csb || (bank_sel != 3'b100);
+assign bank_csb[5] = csb || (bank_sel != 3'b101);
+assign bank_csb[6] = csb || (bank_sel != 3'b110);
+assign bank_csb[7] = csb || (bank_sel != 3'b111);
 
 // Array to collect outputs from each bank
 wire [7:0] bank_byte_dout [NUM_BANKS-1:0][WRAPPER_NUM_BYTES-1:0];

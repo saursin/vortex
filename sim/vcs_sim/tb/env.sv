@@ -8,12 +8,11 @@ class environment;
     virtual vortex_wrapper_if vtx_if;
     logic [31:0] exitcode;
     string program_file;
-    logic [`VX_MEM_DATA_WIDTH-1:0] init_data [0:(1024*1024*8/`VX_MEM_DATA_WIDTH)-1];
-    int region1_size = 'h180 / (`VX_MEM_DATA_WIDTH / 8);
-    int region3_size = ('h100000000 - 'hFFFD1FC0)/(`VX_MEM_DATA_WIDTH/8);
-    int region3_start = 'hFFFD1FC0 / (`VX_MEM_DATA_WIDTH / 8);
+    int region1_size = 'h500 / (`VX_MEM_DATA_WIDTH / 8);
+    int region3_size = ('h100000000 - 'hFFEF0000)/(`VX_MEM_DATA_WIDTH/8);
+    int region3_start = 'hFFEF0000 / (`VX_MEM_DATA_WIDTH / 8);
     int startup_addr = `STARTUP_ADDR / (`VX_MEM_DATA_WIDTH / 8);
-    int mem_depth = 1024*1024/(`VX_MEM_DATA_WIDTH/8);
+    int mem_depth = 2*1024*1024/(`VX_MEM_DATA_WIDTH/8);
     int region2_end = startup_addr + (mem_depth - region1_size - region3_size) - 1;
 
     //constructor
@@ -24,7 +23,6 @@ class environment;
 
     //run task
     task run;
-        
         handle_all_mem_requests();
         $display("Time: %t | Start of simulation", $time);
 
@@ -250,37 +248,36 @@ class environment;
     endfunction
 
     task automatic handle_all_mem_requests();
-        fork
-            for (int b = 0; b < `VX_MEM_PORTS; b++) begin
-                handle_mem_request_bank(b);
-            end
-        join_none
+        for (int b = 0; b < `NUM_CORES; b++) begin
+            automatic int core_idx = b; 
+            fork 
+                begin 
+                    handle_mem_request_bank(core_idx);
+                end
+            join_none
+        end
     endtask
 
-    task automatic handle_mem_request_bank(input int b);
+    task automatic handle_mem_request_bank(input int c);
         logic [63:0] byte_addr;
         int cout_file;
         string file_name;
-        
-        $sformat(file_name, "console_output_%0d.txt", b);
+        $sformat(file_name, "console_output_%0d.txt", c);
         cout_file = $fopen(file_name, "a");
         if (cout_file == 0) begin
             $fatal("Failed to open output file!");
         end
 
         forever begin
-            wait (tb_top.VX_wrapper_top.mem_req_valid[b] && tb_top.VX_wrapper_top.mem_req_ready[b] && tb_top.VX_wrapper_top.mem_req_rw[b]);
+            wait (tb_top.VX_wrapper_top.mem_req_valid[0] && tb_top.VX_wrapper_top.mem_req_ready[0] && tb_top.VX_wrapper_top.mem_req_rw[0]);
 
-            byte_addr = tb_top.VX_wrapper_top.mem_req_addr[b] * `PLATFORM_MEMORY_DATA_SIZE;
-
-            for (int i = 0; i < `PLATFORM_MEMORY_DATA_SIZE; i++) begin
-                if (tb_top.VX_wrapper_top.mem_req_byteen[b][i]) begin
-                    if (byte_addr >= `IO_COUT_ADDR && byte_addr < (`IO_COUT_ADDR + `IO_COUT_SIZE)) begin
-                        // Console output to file
-                        $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[b][i*8 +: 8]);
-                        if (tb_top.VX_wrapper_top.mem_req_data[b][i] == 8'd10) begin
-                            $fwrite(cout_file, "\n");
-                        end
+            byte_addr = tb_top.VX_wrapper_top.mem_req_addr[0] * `PLATFORM_MEMORY_DATA_SIZE;
+            if (tb_top.VX_wrapper_top.mem_req_byteen[0][(`NUM_WARPS*`NUM_THREADS*c)%64]) begin
+                if (byte_addr >= `IO_COUT_ADDR && byte_addr < (`IO_COUT_ADDR + `IO_COUT_SIZE)) begin
+                    // Console output to file
+                    $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[0][((`NUM_WARPS*`NUM_THREADS*c)%64)*8 +: 8]);
+                    if (tb_top.VX_wrapper_top.mem_req_data[0][(`NUM_WARPS*`NUM_THREADS*c)%64] == 8'd10) begin
+                        $fwrite(cout_file, "\n");
                     end
                 end
             end
