@@ -8,11 +8,11 @@ class environment;
     virtual vortex_wrapper_if vtx_if;
     logic [31:0] exitcode;
     string program_file;
-    int region1_size = 'h500 / (`VX_MEM_DATA_WIDTH / 8);
-    int region3_size = ('h100000000 - 'hFFEF0000)/(`VX_MEM_DATA_WIDTH/8);
-    int region3_start = 'hFFEF0000 / (`VX_MEM_DATA_WIDTH / 8);
+    int region1_size = 'h4C0 / (`VX_MEM_DATA_WIDTH / 8);
+    int region3_size = ('h100000000 - 'hFFF70000)/(`VX_MEM_DATA_WIDTH/8);
+    int region3_start = 'hFFF70000 / (`VX_MEM_DATA_WIDTH / 8);
     int startup_addr = `STARTUP_ADDR / (`VX_MEM_DATA_WIDTH / 8);
-    int mem_depth = 2*1024*1024/(`VX_MEM_DATA_WIDTH/8);
+    int mem_depth = 1024*1024/(`VX_MEM_DATA_WIDTH/8);
     int region2_end = startup_addr + (mem_depth - region1_size - region3_size) - 1;
 
     //constructor
@@ -66,7 +66,7 @@ class environment;
                 $display("Time: %t | Completed waiting for busy 0", $time);
         end
         begin
-            #2000000;
+          #10000000;
             $finish;
         end
         join_any
@@ -248,7 +248,7 @@ class environment;
     endfunction
 
     task automatic handle_all_mem_requests();
-        for (int b = 0; b < `NUM_CORES; b++) begin
+        for (int b = 0; b < `NUM_CORES*`NUM_WARPS*`NUM_THREADS; b++) begin
             automatic int core_idx = b; 
             fork 
                 begin 
@@ -272,11 +272,11 @@ class environment;
             wait (tb_top.VX_wrapper_top.mem_req_valid[0] && tb_top.VX_wrapper_top.mem_req_ready[0] && tb_top.VX_wrapper_top.mem_req_rw[0]);
 
             byte_addr = tb_top.VX_wrapper_top.mem_req_addr[0] * `PLATFORM_MEMORY_DATA_SIZE;
-            if (tb_top.VX_wrapper_top.mem_req_byteen[0][(`NUM_WARPS*`NUM_THREADS*c)%64]) begin
+            if (tb_top.VX_wrapper_top.mem_req_byteen[0][(c)%64]) begin
                 if (byte_addr >= `IO_COUT_ADDR && byte_addr < (`IO_COUT_ADDR + `IO_COUT_SIZE)) begin
                     // Console output to file
-                    $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[0][((`NUM_WARPS*`NUM_THREADS*c)%64)*8 +: 8]);
-                    if (tb_top.VX_wrapper_top.mem_req_data[0][(`NUM_WARPS*`NUM_THREADS*c)%64] == 8'd10) begin
+                    $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[0][((c)%64)*8 +: 8]);
+                    if (tb_top.VX_wrapper_top.mem_req_data[0][(c)%64] == 8'd10) begin
                         $fwrite(cout_file, "\n");
                     end
                 end

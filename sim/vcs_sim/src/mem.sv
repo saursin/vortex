@@ -24,12 +24,12 @@ module memory #(
 );
 
     // Internal memory parameters
-    localparam MEM_DEPTH = 2*1024*1024/(`VX_MEM_DATA_WIDTH/8);
+    localparam MEM_DEPTH = 1024*1024/(`VX_MEM_DATA_WIDTH/8);
     
     // Define memory regions 
-    localparam REGION1_SIZE = 'h500 / (`VX_MEM_DATA_WIDTH / 8);
-    localparam REGION3_SIZE = ('h100000000 - 'hFFEF0000) / (`VX_MEM_DATA_WIDTH / 8);
-    localparam REGION3_START = 'hFFEF0000 / (`VX_MEM_DATA_WIDTH / 8);
+    localparam REGION1_SIZE = 'h4C0 / (`VX_MEM_DATA_WIDTH / 8);
+    localparam REGION3_SIZE = ('h100000000 - 'hFFF70000) / (`VX_MEM_DATA_WIDTH / 8);
+    localparam REGION3_START = 'hFFF70000 / (`VX_MEM_DATA_WIDTH / 8);
     localparam REGION2_SIZE = MEM_DEPTH - REGION1_SIZE - REGION3_SIZE;
     localparam REGION2_END = `STARTUP_ADDR/ (`VX_MEM_DATA_WIDTH / 8) + REGION2_SIZE - 1;
 
