@@ -35,6 +35,22 @@
 #include <dram_sim.h>
 #include <util.h>
 
+#ifdef EN_VXDBG
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#ifndef AF_INET
+#include <sys/socket.h>
+#endif
+#ifndef INADDR_ANY
+#include <netinet/in.h>
+#endif
+#endif
+
 #ifndef MEM_CLOCK_RATIO
 #define MEM_CLOCK_RATIO 1
 #endif
@@ -158,13 +174,16 @@ public:
       device_->mem_req_ready[b] = 1;
     }
 
-    // wait on device to go busy
-    while (!device_->busy) {
-      this->tick();
-    }
+    // // wait on device to go busy
+    // while (!device_->busy) {
+    //   this->tick();
+    // }
 
-    // wait on device to go idle
-    while (device_->busy) {
+    // // wait on device to go idle
+    // while (device_->busy) {
+    //   this->tick();
+    // }
+    while(1){
       this->tick();
     }
 
@@ -183,11 +202,76 @@ public:
     this->tick();
   }
 
+#ifdef EN_VXDBG
+  void start_debugger(int port){
+    debug_port_ = port;
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == -1) {
+        fprintf(stderr, "ERROR: Failed to make socket: %s (%d)\n", strerror(errno), errno);
+        abort();
+    }
+
+    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+    int reuseaddr = 1;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(int)) == -1) {
+        fprintf(stderr, "ERROR: Failed setsockopt: %s (%d)\n", strerror(errno), errno);
+        abort();
+    }
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
+
+    if (bind(socket_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+        fprintf(stderr, "ERROR: Failed to bind socket: %s (%d)\n", strerror(errno), errno);
+        abort();
+    }
+
+    if (listen(socket_fd, 1) == -1) {
+        fprintf(stderr, "ERROR: Failed to listen on socket: %s (%d)\n", strerror(errno), errno);
+        abort();
+    }
+
+    socklen_t addrlen = sizeof(addr);
+    if (getsockname(socket_fd, (struct sockaddr *) &addr, &addrlen) == -1) {
+        fprintf(stderr, "ERROR: Failed to get socket name: %s (%d)\n", strerror(errno), errno);
+        abort();
+    }
+
+    printf("[DBGSERVER] Listening for vxdbg connection on port %d.\n", ntohs(addr.sin_port));
+    fflush(stdout);
+  }
+
+  void debugger_accept() {
+    client_fd = ::accept(socket_fd, NULL, NULL);
+    if (client_fd == -1) {
+        if (errno == EAGAIN) {
+            // No client waiting to connect right now.
+        } 
+        else {
+            fprintf(stderr, "ERROR: failed to accept on socket: %s (%d)\n", strerror(errno), errno);
+            abort();
+        }
+    }
+    else {
+        fcntl(client_fd, F_SETFL, O_NONBLOCK);
+    }
+  }
+
+  bool is_connected() {
+    return client_fd > 0;
+  }
+#endif
+
+
 private:
 
   void reset() {
     this->mem_bus_reset();
     this->dcr_bus_reset();
+    this->dbg_bus_reset();
 
     print_bufs_.clear();
 
@@ -214,12 +298,12 @@ private:
 
     device_->clk = 0;
     this->eval();
-
+    this->dbg_bus_eval(0);
     this->mem_bus_eval(0);
 
     device_->clk = 1;
     this->eval();
-
+    this->dbg_bus_eval(1);
     this->mem_bus_eval(1);
 
     dram_sim_.tick();
@@ -380,6 +464,97 @@ private:
     }
   }
 
+#ifdef EN_VXDBG
+  void dbg_bus_reset() {
+    device_->vxdbg_addr  = 0;
+    device_->vxdbg_rdata = 0;
+    device_->vxdbg_wdata = 0;
+    device_->vxdbg_we    = 0;
+    device_->vxdbg_valid = 0;
+    device_->vxdbg_ack   = 0;
+  }
+
+  void dbg_bus_eval(int clk) {
+    static std::string cmd;
+    static uint32_t arg1;
+    static uint32_t arg2;
+    static enum { IDLE, ACTIVE} state = IDLE;
+    static bool ack = false;
+    
+    // Skip negedge
+    if (!clk) {
+      return;
+    }
+
+    // Update signals on posedge
+    if(state == IDLE) { 
+      // Fetch a new command
+      char buf[256];
+      memset((void*)buf, 0, sizeof(buf));
+      int recv_bytes = recv(client_fd, buf, sizeof(buf)-1, 0);
+      if (recv_bytes <= 0) {
+        return;
+      }
+      std::string line(buf);
+
+      // Remove trailing newline characters
+      line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+
+      std::istringstream iss(line);
+      iss >> cmd;
+      if (cmd == "r") {
+        iss >> std::hex >> arg1;
+      }
+      else if (cmd == "w") {
+        iss >> std::hex >> arg1 >> arg2;
+      }
+      else {
+        const char* errormsg = "ERR Unknown command\n";
+        send(client_fd, errormsg, strlen(errormsg), 0);
+        return;
+      }
+
+//    printf("[DBGSERVER] Got: %s\n", line.c_str());
+
+      // Drive bus signals
+      if(cmd == "r"){
+        device_->vxdbg_addr  = arg1;
+        device_->vxdbg_valid = 1;
+        device_->vxdbg_we    = 0;
+      }
+      else if(cmd == "w"){
+        device_->vxdbg_addr  = arg1;
+        device_->vxdbg_wdata = arg2;
+        device_->vxdbg_valid = 1;
+        device_->vxdbg_we    = 1;
+      }
+      state = ACTIVE;
+    }
+
+    if (state == ACTIVE && device_->vxdbg_ack) {
+      device_->vxdbg_addr  = 0;
+      device_->vxdbg_wdata = 0;
+      device_->vxdbg_valid = 0;
+      device_->vxdbg_we    = 0;
+      if (cmd == "r") {
+        char ackmsg[64];
+        snprintf(ackmsg, sizeof(ackmsg), "ACK %08x\n", device_->vxdbg_rdata);
+        send(client_fd, ackmsg, strlen(ackmsg), 0);
+//        printf("[DBGSERVER] Sent: %s", ackmsg);
+      }
+      else if (cmd == "w") {
+        const char* ackmsg = "ACK\n";
+        send(client_fd, ackmsg, strlen(ackmsg), 0);
+//        printf("[DBGSERVER] Sent: %s", ackmsg);
+      }
+      state = IDLE;
+      cmd = "";
+      arg1 = 0;
+      arg2 = 0;
+    }
+  }
+#endif
+
 private:
 
   typedef struct {
@@ -408,6 +583,15 @@ private:
 #ifdef VCD_OUTPUT
   VerilatedVcdC *tfp_;
 #endif
+
+#ifdef EN_VXDBG
+  int debug_port_ = -1;
+  // Socket descriptors
+  int socket_fd = -1;
+  int client_fd = -1;
+  bool debug_connected_ = false;
+#endif
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -430,4 +614,21 @@ void Processor::run() {
 
 void Processor::dcr_write(uint32_t addr, uint32_t value) {
   return impl_->dcr_write(addr, value);
+}
+
+void Processor::connect_debugger(int port) {
+  #ifdef EN_VXDBG
+  std::cout << "[DBGSERVER] Starting debug server on port: " << port << std::endl;
+  impl_->start_debugger(port);
+  
+  while(!impl_->is_connected()) {
+    impl_->debugger_accept();
+  }
+  std::cout << "[DBGSERVER] Debugger connected!" << std::endl;
+
+  #else
+  std::cerr << "ERROR: Debugging support not enabled in this build." << std::endl;
+  std::cerr << "       Rebuild with -DEN_VXDBG=ON to enable debugging support." << std::endl;
+  abort();
+  #endif
 }

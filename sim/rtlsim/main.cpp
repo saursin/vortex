@@ -26,18 +26,22 @@
 using namespace vortex;
 
 static void show_usage() {
-   std::cout << "Usage: [-h: help] <program>" << std::endl;
+   std::cout << "Usage: [-h: help] [-p debugger port] <program>" << std::endl;
 }
 
 const char* program = nullptr;
+int debugger_port = -1;
 
 static void parse_args(int argc, char **argv) {
   	int c;
-  	while ((c = getopt(argc, argv, "rh")) != -1) {
+  	while ((c = getopt(argc, argv, "rp:h")) != -1) {
     	switch (c) {
     	case 'h':
       	show_usage();
       	exit(0);
+    	case 'p':
+      	debugger_port = std::stoi(optarg);
+      	break;
     	default:
       		show_usage();
       		exit(-1);
@@ -90,6 +94,11 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
 	std::cout << "[VXDRV] START: program=" << program << std::endl;
 #endif
+
+	// connect debugger
+	if(debugger_port != -1)
+		processor.connect_debugger(debugger_port);
+
 	// run simulation
 	processor.run();
 

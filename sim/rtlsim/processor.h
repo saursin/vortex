@@ -31,6 +31,8 @@ public:
 
   void dcr_write(uint32_t addr, uint32_t value);
 
+  void connect_debugger(int port);
+
 private:
 
   class Impl;
