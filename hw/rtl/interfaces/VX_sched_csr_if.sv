@@ -23,6 +23,14 @@ interface VX_sched_csr_if ();
     wire unlock_warp;
     wire [`NW_WIDTH-1:0] unlock_wid;
 
+`ifdef EN_VXDBG
+    // Debug CSRs
+    wire [`CLOG2(`NUM_WARPS)-1:0] dbg_dscratch_wid;
+    wire [`XLEN-1:0]              dbg_dscratch_rdat;
+    wire [`XLEN-1:0]              dbg_dscratch_wdat;
+    wire                          dbg_dscratch_we;
+`endif
+
     modport master (
         output cycles,
         output active_warps,
@@ -31,6 +39,14 @@ interface VX_sched_csr_if ();
         output alm_empty,
         input  unlock_wid,        
         input  unlock_warp
+
+    `ifdef EN_VXDBG
+        ,
+        output dbg_dscratch_wid,
+        input  dbg_dscratch_rdat,
+        output dbg_dscratch_wdat,
+        output dbg_dscratch_we
+    `endif
     );
 
     modport slave (
@@ -41,6 +57,14 @@ interface VX_sched_csr_if ();
         input  alm_empty,
         output unlock_wid,
         output unlock_warp
+    
+    `ifdef EN_VXDBG
+        ,
+        input  dbg_dscratch_wid,
+        output dbg_dscratch_rdat,
+        input  dbg_dscratch_wdat,
+        input  dbg_dscratch_we
+    `endif
     );
 
 endinterface

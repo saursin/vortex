@@ -40,9 +40,43 @@ module Vortex import VX_gpu_pkg::*; (
     input  wire [`VX_DCR_ADDR_WIDTH-1:0]    dcr_wr_addr,
     input  wire [`VX_DCR_DATA_WIDTH-1:0]    dcr_wr_data,
 
+`ifdef EN_VXDBG
+    // VX debug bus
+    input  wire [`VXDBGBUS_ADDRW-1:0]       vxdbg_addr,
+    output wire [`VXDBGBUS_DATAW-1:0]       vxdbg_rdata,
+    input  wire [`VXDBGBUS_DATAW-1:0]       vxdbg_wdata,
+    input  wire                             vxdbg_we,
+    input  wire                             vxdbg_valid,
+    output wire                             vxdbg_ack,
+`endif
+
     // Status
     output wire                             busy
 );
+
+logic sys_reset;
+
+`ifdef EN_VXDBG
+    VX_dm_core_if #() dm_core_if[`NUM_CLUSTERS * `NUM_CORES]();
+    wire ndmreset;
+
+    VX_debug_module dm (
+        .clk            (clk),
+        .reset          (reset),
+        .vxdbg_addr     (vxdbg_addr),
+        .vxdbg_rdata    (vxdbg_rdata),
+        .vxdbg_wdata    (vxdbg_wdata),
+        .vxdbg_we       (vxdbg_we),
+        .vxdbg_valid    (vxdbg_valid),
+        .vxdbg_ack      (vxdbg_ack),
+        .dm_core_if     (dm_core_if),
+        .ndmreset       (ndmreset)
+    );
+
+    assign sys_reset = reset | ndmreset;
+`else
+    assign sys_reset = reset;
+`endif
 
 `ifdef SCOPE
     localparam scope_cluster = 0;
@@ -70,7 +104,7 @@ module Vortex import VX_gpu_pkg::*; (
         .TAG_WIDTH (L3_MEM_TAG_WIDTH)
     ) mem_bus_if[`L3_MEM_PORTS]();
 
-    `RESET_RELAY (l3_reset, reset);
+    `RESET_RELAY (l3_reset, sys_reset);
 
     VX_cache_wrap #(
         .INSTANCE_ID    ("l3cache"),
@@ -134,7 +168,7 @@ module Vortex import VX_gpu_pkg::*; (
     // Generate all clusters
     for (genvar cluster_id = 0; cluster_id < `NUM_CLUSTERS; ++cluster_id) begin : g_clusters
 
-        `RESET_RELAY (cluster_reset, reset);
+        `RESET_RELAY (cluster_reset, sys_reset);
 
         VX_dcr_bus_if cluster_dcr_bus_if();
         `BUFFER_DCR_BUS_IF (cluster_dcr_bus_if, dcr_bus_if, 1'b1, (`NUM_CLUSTERS > 1))
@@ -155,6 +189,10 @@ module Vortex import VX_gpu_pkg::*; (
             .dcr_bus_if         (cluster_dcr_bus_if),
 
             .mem_bus_if         (per_cluster_mem_bus_if[cluster_id * `L2_MEM_PORTS +: `L2_MEM_PORTS]),
+
+        `ifdef EN_VXDBG
+            .dm_core_if         (dm_core_if[cluster_id * `NUM_CORES +: `NUM_CORES]),
+        `endif
 
             .busy               (per_cluster_busy[cluster_id])
         );
@@ -187,7 +225,7 @@ module Vortex import VX_gpu_pkg::*; (
     reg [`PERF_CTR_BITS-1:0] perf_mem_pending_reads;
 
     always @(posedge clk) begin
-        if (reset) begin
+        if (sys_reset) begin
             perf_mem_pending_reads <= '0;
         end else begin
             perf_mem_pending_reads <= $signed(perf_mem_pending_reads) +
@@ -196,7 +234,7 @@ module Vortex import VX_gpu_pkg::*; (
     end
 
     always @(posedge clk) begin
-        if (reset) begin
+        if (sys_reset) begin
             mem_perf <= '0;
         end else begin
             mem_perf.reads <= mem_perf.reads + `PERF_CTR_BITS'(perf_mem_reads_per_cycle);

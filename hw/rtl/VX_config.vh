@@ -317,6 +317,16 @@
 `define MEM_PAGE_LOG2_SIZE (12)
 `endif
 
+
+// Debug Configuration /////////////////////////////////////////////////////////
+`ifndef EN_VXDBG_DISABLE
+`define EN_VXDBG
+`endif
+
+`define VXDBGBUS_ADDRW 4
+`define VXDBGBUS_DATAW 32
+
+
 // Virtual Memory Configuration ///////////////////////////////////////////////////////
 `ifdef VM_ENABLE
     `ifdef XLEN_32

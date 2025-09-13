@@ -33,6 +33,11 @@ module VX_cluster import VX_gpu_pkg::*; #(
     // Memory
     VX_mem_bus_if.master        mem_bus_if [`L2_MEM_PORTS],
 
+`ifdef EN_VXDBG
+    // VX debug bus
+    VX_dm_core_if.slave         dm_core_if[`NUM_CORES],
+`endif
+
     // Status
     output wire                 busy
 );
@@ -149,6 +154,10 @@ module VX_cluster import VX_gpu_pkg::*; #(
 
         `ifdef GBAR_ENABLE
             .gbar_bus_if    (per_socket_gbar_bus_if[socket_id]),
+        `endif
+
+        `ifdef EN_VXDBG
+            .dm_core_if     (dm_core_if[socket_id * `SOCKET_SIZE +: `SOCKET_SIZE]),
         `endif
 
             .busy           (per_socket_busy[socket_id])

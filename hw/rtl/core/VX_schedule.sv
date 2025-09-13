@@ -40,6 +40,10 @@ module VX_schedule import VX_gpu_pkg::*; #(
 `endif
     VX_sched_csr_if.master  sched_csr_if,
 
+`ifdef EN_VXDBG
+    VX_dm_core_if.slave     dm_core_if,
+`endif
+
     // status
     output wire             busy
 );
@@ -48,6 +52,16 @@ module VX_schedule import VX_gpu_pkg::*; #(
 
     reg [`NUM_WARPS-1:0] active_warps, active_warps_n; // updated when a warp is activated or disabled
     reg [`NUM_WARPS-1:0] stalled_warps, stalled_warps_n;  // set when branch/gpgpu instructions are issued
+
+`ifdef EN_VXDBG
+    reg [`NUM_WARPS-1:0] halted_warps, halted_warps_n;  // set when a warp is halted (debugging)
+    
+    localparam STEP_NONE      = 2'b00;
+    localparam STEP_REQ       = 2'b01;
+    localparam STEP_INFLIGHT  = 2'b10;
+    reg [1:0] step, step_n;
+    reg [`CLOG2(`NUM_WARPS)-1:0] step_wid, step_wid_n; // wid being stepped
+`endif
 
     reg [`NUM_WARPS-1:0][`NUM_THREADS-1:0] thread_masks, thread_masks_n;
     reg [`NUM_WARPS-1:0][`PC_BITS-1:0] warp_pcs, warp_pcs_n;
@@ -110,6 +124,11 @@ module VX_schedule import VX_gpu_pkg::*; #(
         barrier_ctrs_n  = barrier_ctrs;
         barrier_stalls_n= barrier_stalls;
         warp_pcs_n      = warp_pcs;
+`ifdef EN_VXDBG
+        halted_warps_n  = halted_warps;
+        step_n          = step;
+        step_wid_n      = step_wid;
+`endif
 
         // decode unlock
         if (decode_sched_if.valid && decode_sched_if.unlock) begin
@@ -206,6 +225,36 @@ module VX_schedule import VX_gpu_pkg::*; #(
         if (schedule_if_fire) begin
             warp_pcs_n[schedule_if.data.wid] = schedule_if.data.PC + `PC_BITS'(2);
         end
+
+`ifdef EN_VXDBG
+        // halt handling (debugging)
+        if (dm_core_if.halt_req) begin
+            halted_warps_n = halted_warps | dm_core_if.warp_mask;
+        end
+        else if (dm_core_if.resume_req) begin
+            halted_warps_n = halted_warps & ~dm_core_if.warp_mask;
+        end
+        else if (step == STEP_NONE && dm_core_if.step_req) begin
+            step_n = STEP_REQ;
+            halted_warps_n = halted_warps & ~(1 << dm_core_if.wsel_wid);     // clear halted state for selected wid only
+            step_wid_n = dm_core_if.wsel_wid;
+        end
+        // if we see step warp being scheduled, then we halt it again and clear step
+        else if(step == STEP_REQ && schedule_if_fire && (schedule_if.data.wid == step_wid)) begin
+            step_n = STEP_INFLIGHT;
+            halted_warps_n = halted_warps | (1 << step_wid);    // set halted state for the stepped wid
+        end
+        // if we see step wid committed, then we can clear step
+        else if(step == STEP_INFLIGHT && commit_sched_if.committed_warps[step_wid]) begin
+            step_n = STEP_NONE;
+        end
+        // PC write from debugger: allow only if the warp is halted
+        // kept in else-if to avoid: step/resume/halting and PC write in same cycle
+        else if(dm_core_if.dpc_we && halted_warps[dm_core_if.wsel_wid]) begin
+            warp_pcs_n[dm_core_if.wsel_wid] = dm_core_if.dpc_wdat;
+        end
+`endif
+
     end
 
     `UNUSED_VAR (base_dcrs)
@@ -224,6 +273,11 @@ module VX_schedule import VX_gpu_pkg::*; #(
             barrier_stalls  <= '0;
             cycles          <= '0;
             wspawn.valid    <=  0;
+        `ifdef EN_VXDBG
+            halted_warps    <= '0;
+            step            <= STEP_NONE;
+            step_wid        <= '0;
+        `endif
 
             // activate first warp
             warp_pcs[0]     <= base_dcrs.startup_addr[1 +: `PC_BITS];
@@ -239,6 +293,11 @@ module VX_schedule import VX_gpu_pkg::*; #(
             barrier_ctrs   <= barrier_ctrs_n;
             barrier_stalls <= barrier_stalls_n;
             is_single_warp <= (active_warps_cnt == $bits(active_warps_cnt)'(1));
+        `ifdef EN_VXDBG
+            halted_warps <= halted_warps_n;
+            step         <= step_n;
+            step_wid     <= step_wid_n;
+        `endif
 
             // wspawn handling
             if (warp_ctl_if.valid && warp_ctl_if.wspawn.valid) begin
@@ -304,7 +363,22 @@ module VX_schedule import VX_gpu_pkg::*; #(
 
     // schedule the next ready warp
 
+`ifdef EN_VXDBG
+    // connect to debug module 
+    assign sched_csr_if.dbg_dscratch_wid  = dm_core_if.wsel_wid;
+    assign dm_core_if.dscratch_rdat       = sched_csr_if.dbg_dscratch_rdat;
+    assign sched_csr_if.dbg_dscratch_wdat = dm_core_if.dscratch_wdat;
+    assign sched_csr_if.dbg_dscratch_we   = dm_core_if.dscratch_we;
+
+    // expose debug status
+    assign dm_core_if.warp_status = halted_warps;
+    assign dm_core_if.step_state  = step;
+    assign dm_core_if.dpc_rdat    = warp_pcs[dm_core_if.wsel_wid];
+
+    wire [`NUM_WARPS-1:0] ready_warps = active_warps & ~stalled_warps & ~halted_warps;
+`else
     wire [`NUM_WARPS-1:0] ready_warps = active_warps & ~stalled_warps;
+`endif
 
     VX_lzc #(
         .N (`NUM_WARPS),

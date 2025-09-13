@@ -67,6 +67,14 @@ import VX_fpu_pkg::*;
     input wire [`NW_WIDTH-1:0]          write_wid,
     input wire [`VX_CSR_ADDR_BITS-1:0]  write_addr,
     input wire [`XLEN-1:0]              write_data
+
+`ifdef EN_VXDBG
+    ,
+    input  wire [`CLOG2(`NUM_WARPS)-1:0]    dbg_dscratch_wid,
+    output wire [`XLEN-1:0]                 dbg_dscratch_rdat,
+    input  wire [`XLEN-1:0]                 dbg_dscratch_wdat,
+    input  wire                             dbg_dscratch_we
+`endif
 );
 
     `UNUSED_VAR (reset)
@@ -120,10 +128,31 @@ import VX_fpu_pkg::*;
     end
 `endif
 
+
+`ifdef EN_VXDBG
+    // Debug CSRs
+    // dscratch is a read/write CSR, one per warp
+    reg [`XLEN-1:0] dscratch [`NUM_WARPS-1:0];
+`endif
+
     always @(posedge clk) begin
         if (reset) begin
             mscratch <= base_dcrs.startup_arg;
+        
+        `ifdef EN_VXDBG
+            for (integer i = 0; i < `NUM_WARPS; ++i) begin
+                dscratch[i] <= '0;
+            end
+        `endif
+        
         end
+        
+    `ifdef EN_VXDBG
+        if (dbg_dscratch_we) begin
+            dscratch[dbg_dscratch_wid] <= dbg_dscratch_wdat;
+        end
+    `endif
+
         if (write_enable) begin
             case (write_addr)
             `ifdef EXT_F_ENABLE
@@ -146,6 +175,11 @@ import VX_fpu_pkg::*;
                 `VX_CSR_MSCRATCH: begin
                     mscratch <= write_data;
                 end
+            `ifdef EN_VXDBG
+                `VX_CSR_DSCRATCH: begin
+                    dscratch[write_wid] <= write_data;
+                end
+            `endif
                 default: begin
                     `ASSERT(0, ("%t: *** %s invalid CSR write address: %0h (#%0d)", $time, INSTANCE_ID, write_addr, write_uuid));
                 end
@@ -201,6 +235,10 @@ import VX_fpu_pkg::*;
             `VX_CSR_MEPC,
             `VX_CSR_PMPCFG0,
             `VX_CSR_PMPADDR0 : read_data_ro_w = `XLEN'(0);
+        
+        `ifdef EN_VXDBG
+            `VX_CSR_DSCRATCH : read_data_rw_w = dscratch[read_wid];
+        `endif
 
             default: begin
                 read_addr_valid_w = 0;
@@ -286,6 +324,10 @@ import VX_fpu_pkg::*;
 
     assign read_data_ro = read_data_ro_w;
     assign read_data_rw = read_data_rw_w;
+
+`ifdef EN_VXDBG
+    assign dbg_dscratch_rdat = dscratch[dbg_dscratch_wid];
+`endif
 
     `UNUSED_VAR (base_dcrs)
 

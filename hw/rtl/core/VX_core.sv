@@ -41,6 +41,10 @@ module VX_core import VX_gpu_pkg::*; #(
     VX_gbar_bus_if.master   gbar_bus_if,
 `endif
 
+`ifdef EN_VXDBG
+    VX_dm_core_if.slave     dm_core_if,
+`endif
+
     // Status
     output wire             busy
 );
@@ -111,6 +115,10 @@ module VX_core import VX_gpu_pkg::*; #(
         .gbar_bus_if    (gbar_bus_if),
     `endif
         .sched_csr_if   (sched_csr_if),
+
+    `ifdef EN_VXDBG
+        .dm_core_if     (dm_core_if),
+    `endif
 
         .busy           (busy)
     );

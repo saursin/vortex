@@ -219,6 +219,7 @@
 `define VX_TC_NUM                       12'hFC5
 `define VX_TC_SIZE                      12'hFC6
 
-
+// Debug CSRs
+`define VX_CSR_DSCRATCH                 12'h7A0
 
 `endif // VX_TYPES_VH
