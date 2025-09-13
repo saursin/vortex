@@ -273,7 +273,7 @@ class environment;
 
             byte_addr = tb_top.VX_wrapper_top.mem_req_addr[0] * `PLATFORM_MEMORY_DATA_SIZE;
             if (tb_top.VX_wrapper_top.mem_req_byteen[0][(c)%64]) begin
-                if (byte_addr >= `IO_COUT_ADDR && byte_addr < (`IO_COUT_ADDR + `IO_COUT_SIZE)) begin
+                if (byte_addr == (`IO_COUT_ADDR + (c/`PLATFORM_MEMORY_DATA_SIZE)*`PLATFORM_MEMORY_DATA_SIZE)) begin
                     // Console output to file
                     $fwrite(cout_file, "%s",tb_top.VX_wrapper_top.mem_req_data[0][((c)%64)*8 +: 8]);
                     if (tb_top.VX_wrapper_top.mem_req_data[0][(c)%64] == 8'd10) begin
