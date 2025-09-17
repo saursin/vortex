@@ -245,9 +245,14 @@ public:
   }
 
   void debugger_accept() {
+    if (socket_fd == -1) {
+        fprintf(stderr, "[DBGSERVER] ERROR: socket_fd is invalid!\n");
+        abort();
+    }
+
     client_fd = ::accept(socket_fd, NULL, NULL);
     if (client_fd == -1) {
-        if (errno == EAGAIN) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // No client waiting to connect right now.
         } 
         else {
@@ -257,6 +262,7 @@ public:
     }
     else {
         fcntl(client_fd, F_SETFL, O_NONBLOCK);
+        std::cout << "[DBGSERVER] Debugger connected!\n";
     }
   }
 
@@ -486,13 +492,41 @@ private:
       return;
     }
 
+    // Try to reaccept if disconnected
+    if (client_fd == -1) {
+      if (socket_fd != -1) {
+          debugger_accept();   // only if socket is created
+      }
+      return;  // not connected yet, skip this cycle
+    }
+
     // Update signals on posedge
     if(state == IDLE) { 
       // Fetch a new command
       char buf[256];
       memset((void*)buf, 0, sizeof(buf));
       int recv_bytes = recv(client_fd, buf, sizeof(buf)-1, 0);
-      if (recv_bytes <= 0) {
+      if (recv_bytes == 0) {
+        // Connection closed
+        close(client_fd);
+        client_fd = -1;
+        debug_connected_ = false;
+        std::cout << "[DBGSERVER] Debugger disconnected." << std::endl;
+        return;
+      }
+      if (recv_bytes < 0) {
+        if (errno == EAGAIN) {
+          // No data available right now, just continue
+          return;
+        } 
+        if (errno == ECONNRESET || errno == EPIPE) {
+          // Connection reset by peer
+          close(client_fd);
+          client_fd = -1;
+          debug_connected_ = false;
+          std::cout << "[DBGSERVER] Debugger disconnected (reset by peer)." << std::endl;
+          return;
+        }
         return;
       }
       std::string line(buf);
@@ -624,7 +658,6 @@ void Processor::connect_debugger(int port) {
   while(!impl_->is_connected()) {
     impl_->debugger_accept();
   }
-  std::cout << "[DBGSERVER] Debugger connected!" << std::endl;
 
   #else
   std::cerr << "ERROR: Debugging support not enabled in this build." << std::endl;
