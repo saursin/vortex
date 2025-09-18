@@ -26,16 +26,45 @@ interface VX_schedule_if ();
     data_t data;
     logic  ready;
 
+`ifdef EN_VXDBG
+    logic                    inject_req;
+    logic [`NW_WIDTH-1:0]    inject_wid;
+    logic [`NT_WIDTH-1:0]    inject_tid;
+    logic [`XLEN-1:0]        inject_instr;   
+    logic [1:0]              inject_state;
+    logic                    inject_committed;
+`endif
+
     modport master (
         output valid,
         output data,
         input  ready
+    
+`ifdef EN_VXDBG
+        ,
+        output inject_req,
+        output inject_wid,
+        output inject_tid,
+        output inject_instr,
+        input  inject_state,
+        output inject_committed
+`endif
     );
 
     modport slave (
         input  valid,
         input  data,
         output ready
+
+`ifdef EN_VXDBG
+        ,
+        input  inject_req,
+        input  inject_wid,
+        input  inject_tid,
+        input  inject_instr,
+        output inject_state,
+        input  inject_committed
+`endif
     );
 
 endinterface

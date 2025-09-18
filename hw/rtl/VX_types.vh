@@ -220,6 +220,6 @@
 `define VX_TC_SIZE                      12'hFC6
 
 // Debug CSRs
-`define VX_CSR_DSCRATCH                 12'h7A0
+`define VX_CSR_DSCRATCH                 12'h7b2
 
 `endif // VX_TYPES_VH

@@ -236,8 +236,8 @@ module VX_schedule import VX_gpu_pkg::*; #(
         end
         else if (step == STEP_NONE && dm_core_if.step_req) begin
             step_n = STEP_REQ;
-            halted_warps_n = halted_warps & ~(1 << dm_core_if.wsel_wid);     // clear halted state for selected wid only
-            step_wid_n = dm_core_if.wsel_wid;
+            halted_warps_n = halted_warps & ~(1 << dm_core_if.sel_wid);     // clear halted state for selected wid only
+            step_wid_n = dm_core_if.sel_wid;
         end
         // if we see step warp being scheduled, then we halt it again and clear step
         else if(step == STEP_REQ && schedule_if_fire && (schedule_if.data.wid == step_wid)) begin
@@ -250,8 +250,8 @@ module VX_schedule import VX_gpu_pkg::*; #(
         end
         // PC write from debugger: allow only if the warp is halted
         // kept in else-if to avoid: step/resume/halting and PC write in same cycle
-        else if(dm_core_if.dpc_we && halted_warps[dm_core_if.wsel_wid]) begin
-            warp_pcs_n[dm_core_if.wsel_wid] = dm_core_if.dpc_wdat;
+        else if(dm_core_if.dpc_we && halted_warps[dm_core_if.sel_wid]) begin
+            warp_pcs_n[dm_core_if.sel_wid] = dm_core_if.dpc_wdat;
         end
 `endif
 
@@ -365,29 +365,44 @@ module VX_schedule import VX_gpu_pkg::*; #(
 
 `ifdef EN_VXDBG
     // connect to debug module 
-    assign sched_csr_if.dbg_dscratch_wid  = dm_core_if.wsel_wid;
+    assign sched_csr_if.dbg_dscratch_wid  = dm_core_if.sel_wid;
     assign dm_core_if.dscratch_rdat       = sched_csr_if.dbg_dscratch_rdat;
     assign sched_csr_if.dbg_dscratch_wdat = dm_core_if.dscratch_wdat;
     assign sched_csr_if.dbg_dscratch_we   = dm_core_if.dscratch_we;
 
+    // Instruction injection
+    assign schedule_if.inject_req       = dm_core_if.inject_req;
+    assign schedule_if.inject_wid       = dm_core_if.sel_wid;
+    assign schedule_if.inject_tid       = dm_core_if.sel_tid;
+    assign schedule_if.inject_instr     = dm_core_if.inject_instr;
+    assign schedule_if.inject_committed = commit_sched_if.committed_warps[dm_core_if.sel_wid];
+
     // expose debug status
     assign dm_core_if.warp_status = halted_warps;
     assign dm_core_if.step_state  = step;
-    assign dm_core_if.dpc_rdat    = warp_pcs[dm_core_if.wsel_wid];
+    assign dm_core_if.dpc_rdat    = warp_pcs[dm_core_if.sel_wid];
+    assign dm_core_if.inject_state= schedule_if.inject_state;
 
     wire [`NUM_WARPS-1:0] ready_warps = active_warps & ~stalled_warps & ~halted_warps;
 `else
     wire [`NUM_WARPS-1:0] ready_warps = active_warps & ~stalled_warps;
 `endif
 
+    logic lzc_valid;
     VX_lzc #(
         .N (`NUM_WARPS),
         .REVERSE (1)
     ) wid_select (
         .data_in   (ready_warps),
         .data_out  (schedule_wid),
-        .valid_out (schedule_valid)
+        .valid_out (lzc_valid)
     );
+
+`ifdef EN_VXDBG
+    assign schedule_valid = lzc_valid && !dm_core_if.halt_req;  // do not schedule if halt requested // TODO: Check
+`else
+    assign schedule_valid = lzc_valid;
+`endif
 
     wire [`NUM_WARPS-1:0][(`NUM_THREADS + `PC_BITS)-1:0] schedule_data;
     for (genvar i = 0; i < `NUM_WARPS; ++i) begin : g_schedule_data

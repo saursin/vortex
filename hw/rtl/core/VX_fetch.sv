@@ -124,6 +124,63 @@ module VX_fetch import VX_gpu_pkg::*; #(
 
     // Icache Response
 
+`ifdef EN_VXDBG
+    localparam INJECTSM_NONE     = 2'b00;
+    localparam INJECTSM_REQ      = 2'b01;
+    localparam INJECTSM_INFLIGHT = 2'b10;
+
+    logic [1:0] inject_sm;
+
+    // Goes high when decode can take the injected instruction
+    // injection takes priority over I-cache response
+    logic injecting;
+    assign injecting = (inject_sm == INJECTSM_REQ);
+
+    // Goes high when the injected instruction is actually handed to decode
+    logic injected;
+    assign injected = (fetch_if.valid && fetch_if.ready) && (fetch_if.data.wid == schedule_if.inject_wid);
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            inject_sm <= INJECTSM_NONE;
+        end else begin
+            case (inject_sm)
+                INJECTSM_NONE: begin
+                    if (schedule_if.inject_req) begin   // Accept request
+                        inject_sm <= INJECTSM_REQ;
+                    end
+                end
+                INJECTSM_REQ: begin
+                    if (injecting && injected) begin // Inject when its safe
+                        inject_sm <= INJECTSM_INFLIGHT;
+                    end
+                end
+                INJECTSM_INFLIGHT: begin
+                    if (schedule_if.inject_committed) begin // Wait for injected instruction to be committed
+                        inject_sm <= INJECTSM_NONE;
+                    end
+                end
+                default: begin
+                    inject_sm <= INJECTSM_NONE;
+                end
+            endcase
+        end
+    end
+    
+    // Injection mux
+    assign fetch_if.valid           = injecting ? 1'b1                          : icache_bus_if.rsp_valid;
+    assign fetch_if.data.tmask      = injecting ? (1 << schedule_if.inject_tid) : rsp_tmask;
+    assign fetch_if.data.wid        = injecting ? schedule_if.inject_wid        : rsp_tag;
+    assign fetch_if.data.PC         = injecting ? {`PC_BITS{1'b0}}              : rsp_PC;
+    assign fetch_if.data.instr      = injecting ? schedule_if.inject_instr      : icache_bus_if.rsp_data.data;
+    assign fetch_if.data.uuid       = injecting ? 0                             : rsp_uuid;
+    
+    // Injection takes priority over I-cache response
+    // When injecting, don’t want to consume any I-cache responses that might coincidentally arrive
+    assign icache_bus_if.rsp_ready  = injecting ? 1'b0 : fetch_if.ready;
+
+    assign schedule_if.inject_state = inject_sm;
+`else
     assign fetch_if.valid = icache_bus_if.rsp_valid;
     assign fetch_if.data.tmask = rsp_tmask;
     assign fetch_if.data.wid   = rsp_tag;
@@ -131,6 +188,7 @@ module VX_fetch import VX_gpu_pkg::*; #(
     assign fetch_if.data.instr = icache_bus_if.rsp_data.data;
     assign fetch_if.data.uuid  = rsp_uuid;
     assign icache_bus_if.rsp_ready = fetch_if.ready;
+`endif
 
 `ifdef SCOPE
 `ifdef DBG_SCOPE_FETCH

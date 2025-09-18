@@ -16,37 +16,49 @@
 interface VX_dm_core_if #(
     parameter NUM_WARPS = `NUM_WARPS
 );
+    // Warp status bits
+    logic [NUM_WARPS-1:0]  warp_status;     // Current status of all warps
+    logic [NUM_WARPS-1:0]  warp_mask;       // Warp mask for halt/resume operations
+    logic                  halt_req;        // Request to halt selected warps
+    logic                  resume_req;      // Request to resume selected warps
 
-    logic [NUM_WARPS-1:0]  warp_status;
-    logic [NUM_WARPS-1:0]  warp_mask;
-    logic                  halt_req;
-    logic                  resume_req;
+    // Selected warp and thread for debug operations
+    logic [`NW_BITS-1:0]   sel_wid;         // Selected warp id
+    logic [`NW_BITS-1:0]   sel_tid;         // Selected thread id
 
-    logic [`CLOG2(NUM_WARPS)-1:0]   wsel_wid;   // Selected warp id
+    logic                  step_req;        // step request for selected warp
+    logic [1:0]            step_state;      // state of step request for selected warp
 
-    logic                           step_req;   // step request for selected warp
-    logic [1:0]                     step_state; // state of step request for selected warp
+    // Debug PC
+    logic [`PC_BITS-1:0]   dpc_rdat;        // current PC of the warp being debugged
+    logic [`PC_BITS-1:0]   dpc_wdat;        // new PC to be written to the warp being debugged
+    logic                  dpc_we;          // write enable for dpc_wdat
 
-    logic [`PC_BITS-1:0]          dpc_rdat;   // current PC of the warp being debugged
-    logic [`PC_BITS-1:0]          dpc_wdat;   // new PC to be written to the warp being debugged
-    logic                         dpc_we;     // write enable for dpc_wdat
+    // Instruction injection
+    logic                  inject_req;      // request to inject instruction in warp selected by sel_wid with thread mask generated from sel_tid
+    logic [1:0]            inject_state;    // state of instruction injection
+    logic [`XLEN-1:0]      inject_instr;    // instruction to be injected
 
-    // Debug CSRs (selected by wsel_wid)
-    wire [`XLEN-1:0]              dscratch_rdat;    
-    wire [`XLEN-1:0]              dscratch_wdat;
-    wire                          dscratch_we;
+    // Debug CSRs  for warp selected by sel_wid
+    wire [`XLEN-1:0]       dscratch_rdat;   // read data from debug scratch register
+    wire [`XLEN-1:0]       dscratch_wdat;   // write data to debug scratch register
+    wire                   dscratch_we;     // write enable for debug scratch register
 
     modport master (
         input  warp_status,
         output warp_mask,
         output halt_req,
         output resume_req,
-        output wsel_wid,
+        output sel_wid,
+        output sel_tid,
         output step_req,
         input  step_state,
         input  dpc_rdat,
         output dpc_wdat,
         output dpc_we,
+        output inject_req,
+        input  inject_state,
+        output inject_instr,
         input  dscratch_rdat,
         output dscratch_wdat,
         output dscratch_we
@@ -57,12 +69,16 @@ interface VX_dm_core_if #(
         input  warp_mask,
         input  halt_req,
         input  resume_req,
-        input  wsel_wid,
+        input  sel_wid,
+        input  sel_tid,
         input  step_req,
         output step_state,
         output dpc_rdat,
         input  dpc_wdat,
         input  dpc_we,
+        input  inject_req,
+        output inject_state,
+        input  inject_instr,
         output dscratch_rdat,
         input  dscratch_wdat,
         input  dscratch_we
