@@ -118,6 +118,90 @@ def setbits(orig, hi, lo, value):
     orig |= (value & mask) << lo
     return orig
 
+def str2int(s):
+    try:
+        if s.startswith("0x") or s.startswith("0X"):
+            return int(s, 16)
+        elif s.startswith("0b") or s.startswith("0B"):
+            return int(s, 2)
+        else:
+            return int(s, 10)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid integer value: {s}")
+
+# def hexdump(data, base_addr=0, words_per_line=4, bytes_per_word=4):
+#     if not data:
+#         return "<empty>"
+#     lines = []
+#     total_bytes = len(data)
+#     bytes_per_line = words_per_line * bytes_per_word
+#     for i in range(0, total_bytes, bytes_per_line):
+#         chunk = data[i:i+bytes_per_line]
+#         hex_bytes = ' '.join(f"{b:02x}" for b in chunk)
+#         ascii_bytes = ''.join((chr(b) if 32 <= b < 127 else '.') for b in chunk)
+#         line_addr = base_addr + i
+#         lines.append(f"{line_addr:08x}  {hex_bytes:<{bytes_per_line*3}}  |{ascii_bytes}|")
+#     return '\n'.join(lines)
+import string
+
+def hexdump(data: bytes,
+        base_addr: int = 0,
+        words_per_line: int = 4,
+        bytes_per_word: int = 4,
+        ascii_view: bool = True,
+        show_offset: bool = True,
+        upper_case: bool = True) -> str:
+    """
+    Pretty-print a hex dump of binary data.
+
+    Args:
+        data (bytes): Data to dump.
+        base_addr (int): Starting address (printed at left).
+        words_per_line (int): How many words per line.
+        bytes_per_word (int): How many bytes per word.
+        ascii_view (bool): Whether to show ASCII view on right.
+        show_offset (bool): Whether to show base+offset at line start.
+        upper_case (bool): Upper-case hex (vs lower-case).
+
+    Returns:
+        str: Formatted hex dump.
+    """
+    hex_fmt = f"{{:0{bytes_per_word*2}{'X' if upper_case else 'x'}}}"
+    ascii_printable = string.ascii_letters + string.digits + string.punctuation + " "
+
+    lines = []
+    for offset in range(0, len(data), words_per_line * bytes_per_word):
+        chunk = data[offset:offset + words_per_line * bytes_per_word]
+
+        # left addr
+        if show_offset:
+            line = f"{base_addr + offset:08X}  "
+        else:
+            line = ""
+
+        # hex words
+        words = []
+        for w in range(0, len(chunk), bytes_per_word):
+            word = chunk[w:w + bytes_per_word]
+            val = int.from_bytes(word, "little")
+            words.append(hex_fmt.format(val))
+        line += " ".join(words)
+
+        # padding if last line short
+        if len(chunk) < words_per_line * bytes_per_word:
+            missing = words_per_line - len(words)
+            if missing > 0:
+                line += " " * ((bytes_per_word * 2 + 1) * missing)
+
+        # ascii view
+        if ascii_view:
+            ascii_str = "".join(chr(b) if chr(b) in ascii_printable else "." for b in chunk)
+            line += "  |" + ascii_str.ljust(words_per_line * bytes_per_word, ".") + "|"
+
+        lines.append(line)
+
+    return "\n".join(lines)
+
 
 
 class TimeoutError(Exception):

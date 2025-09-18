@@ -29,6 +29,7 @@ def main():
     parser.add_argument("-p", "--tcp", help="Connect via TCP (host:port)", type=str, default=None)
     parser.add_argument("-v", "--verbosity", help="Set verbosity level (0:error, 1:warn, 2:info, 3-5:debug)", type=int, choices=range(0,6), default=2)
     parser.add_argument("--no-banner", help="Suppress banner display", action="store_true")
+    parser.add_argument("-s", "--script", help="Run commands from a script file and exit", type=str, default=None)
     args = parser.parse_args()
 
     # Set verbosity level
@@ -43,6 +44,9 @@ def main():
     if args.tcp:       
         dbg.connect_tcp(hostportstr=args.tcp)
 
+    if args.script:
+        dbg._run_script(args.script)
+    
     dbg.run_cli()
 
 
