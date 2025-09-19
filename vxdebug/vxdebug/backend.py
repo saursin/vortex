@@ -165,6 +165,8 @@ class Backend:
         self.selected_tid = None
         self.selected_warp_pc = None
 
+        self.breakpoints = {}
+
     def transport_setup(self, name: str):
         if name.lower() == "tcp":
             self.transport = TCPTransport()
@@ -814,7 +816,7 @@ class Backend:
 
         return True
 
-    def inject_instr(self, instr, force_select=True):
+    def inject_instr(self, instr, force_select=False):
         # Make sure warp,thread is selected
         if not self.__assert_warpthread_selected():
             return False
@@ -837,5 +839,44 @@ class Backend:
 
         self.log.debug(f"Injected instruction (wid: {self.selected_wid}, tid: {self.selected_tid}): 0x{instr:X}")
         return True
+
+    def set_breakpoint(self, addr):
+        """
+        Set a breakpoint at the given address.
+        """
+        self.breakpoints[addr] = True
+        return True
+
+    def delete_breakpoint(self, addr):
+        """
+        Clear a breakpoint at the given address.
+        """
+        self.breakpoints.pop(addr, None)
+        return True
+
+    def get_breakpoints(self):
+        """
+        Get all breakpoints.
+        """
+        return list(self.breakpoints.keys())
+        
+    
+    def continue_until_break(self):
+        """
+        Continue execution until a breakpoint is hit.
+        """
+        if not self.__assert_warpthread_selected():
+            return False
+
+        while True:
+            # Step the warp
+            if not self.step_warp():
+                return False
+            
+            # Check if PC is at a breakpoint
+            if self.selected_warp_pc in self.breakpoints:
+                self.log.info(f"Hit breakpoint at 0x{self.selected_warp_pc:X} (wid: {self.selected_wid}, tid: {self.selected_tid})")
+                return True
+   
 
     ############################################################################

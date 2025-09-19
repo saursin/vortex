@@ -10,4 +10,4 @@ readme = "README.md"
 requires-python = ">=3.8"
 
 [project.scripts]
-vxdbg = "vxdebug.debugger_cli:main"
+vxdbg = "vxdebug.debugger:main"

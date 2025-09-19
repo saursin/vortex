@@ -5,9 +5,31 @@ from vxdebug.backend import Backend, DMReg
 DEBUGGER_HISTORY_FILE = ".vxdbg_history"
 DEFAULT_DBGSERVER_PORT = 3333
 
+BANNER = f"""
++--------------------------------------------------------------------------+
+| Vortex Debugger                                                          |
+| Copyright © 2019-2023                                                    |
+|                                                                          |
+| Licensed under the Apache License, Version 2.0 (the "License");          |
+| you may not use this file except in compliance with the License.         |
+| You may obtain a copy of the License at                                  |
+| http://www.apache.org/licenses/LICENSE-2.0                               |
+|                                                                          |
+| Unless required by applicable law or agreed to in writing, software      |
+| distributed under the License is distributed on an "AS IS" BASIS,        |
+| WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. |
+| See the License for the specific language governing permissions and      |
+| limitations under the License.                                           |
++--------------------------------------------------------------------------+
+"""
+
+################################################################################
+# Vortex Debugger
+################################################################################
 class VortexDebugger:
     def __init__(self):
         self.backend = Backend()
+        self.log = Logger("vxdbg")
         
         # CLI state
         self.cli_running = True
@@ -16,6 +38,14 @@ class VortexDebugger:
 
         # Setup commands
         self.__setup_commands()
+
+    def start_gdbserver(self, port=3333):
+        from vxdebug.gdbstub import GDBStub
+        self.gdbstub = GDBStub(self.backend, port)
+        self.backend.select_a_warp(0)
+        self.backend.select_a_thread(0)
+        self.log.info(f"GDB server started on port {port}. Waiting for GDB to connect...")
+        self.gdbstub.serve_forever()
 
     def __register_command(self, name, alias=None, description="", func=None):
         if name in self.commands:
@@ -60,6 +90,7 @@ class VortexDebugger:
             return prompt
 
         try:
+            prev_line = ""
             while self.cli_running:
                 try:
                     line = input(get_prompt()).strip()
@@ -69,11 +100,17 @@ class VortexDebugger:
 
                 # remove comments prefixed with #
                 line = line.split('#')[0].strip()
+
+                if not line:
+                    line = prev_line
+
+                if line != readline.get_history_item(readline.get_current_history_length()):
+                    readline.add_history(line)
+
+                prev_line = line
+
                 if not line:
                     continue
-
-                if line not in [readline.get_history_item(i) for i in range(1, readline.get_current_history_length() + 1)]:
-                    readline.add_history(line)
 
                 cmd = line.split()
                 cmd_name = cmd[0]
@@ -83,10 +120,6 @@ class VortexDebugger:
                 if cmd_name in self.aliases:
                     cmd_name = self.aliases[cmd_name]
 
-
-                if not cmd:
-                    continue
-
                 # Search command 
                 if cmd_name in self.commands:
                     action = self.commands[cmd_name].get('function', None)
@@ -94,12 +127,12 @@ class VortexDebugger:
                         try:
                             action(cmd_args)
                         except Exception as e:
-                            Logger.error(f"Command '{cmd_name}' failed: {e}")  
+                            self.log.error(f"Command '{cmd_name}' failed: {e}")  
                             # Print backtrace in debug mode
                             import traceback
                             traceback.print_exc()                     
                 else:
-                    Logger.warn(f"Unknown command: {cmd_name}")
+                    self.log.warn(f"Unknown command: {cmd_name}")
 
         except KeyboardInterrupt: # Ctrl + C
             pass
@@ -111,11 +144,11 @@ class VortexDebugger:
 
         self.backend.transport_disconnect()
         print("")  # New line after exiting
-        Logger.info("Exiting... Goodbye!")
+        self.log.info("Exiting... Goodbye!")
 
     def _run_script(self, script_path):
         try:
-            Logger.info(f"Running script: {script_path}")
+            self.log.info(f"Running script: {script_path}")
             with open(script_path, 'r') as f:
                 for line in f:
                     line = line.strip()
@@ -136,17 +169,16 @@ class VortexDebugger:
                             try:
                                 action(cmd_args)
                             except Exception as e:
-                                Logger.error(f"Command '{cmd_name}' failed: {e}")  
-                                # Print backtrace in debug mode
-                                import traceback
-                                traceback.print_exc()                     
+                                self.log.error(f"Command '{cmd_name}' failed: {e}")  
+                                exit(1)
+                                              
                     else:
-                        Logger.warn(f"Unknown command: {cmd_name}")
-                Logger.info(f"Finished running script: {script_path}")
+                        self.log.warn(f"Unknown command: {cmd_name}")
+                self.log.info(f"Finished running script: {script_path}")
         except FileNotFoundError:
-            Logger.error(f"Script file not found: {script_path}")
+            self.log.error(f"Script file not found: {script_path}")
         except Exception as e:
-            Logger.error(f"Failed to run script '{script_path}': {e}")
+            self.log.error(f"Failed to run script '{script_path}': {e}")
 
     
     ############################################################################
@@ -167,7 +199,7 @@ class VortexDebugger:
                 if cmd_fn:
                     cmd_fn(['--help'])
             else:
-                Logger.warn(f"No help available for '{args.command}'")
+                self.log.warn(f"No help available for '{args.command}'")
         else:
             helpstr = ""
             for cmd_name, cmd_data in self.commands.items():
@@ -176,7 +208,7 @@ class VortexDebugger:
                 tmpstr = f"{cmd_name}{alias_str}"
 
                 helpstr += f"\t{tmpstr:25s}: {cmd_data['descr']}\n"
-            Logger.info(f"Available commands:\n {helpstr}\n Try 'help <command>' for more details.")
+            self.log.info(f"Available commands:\n {helpstr}\n Try 'help <command>' for more details.")
 
     def _cmd_quit(self, argv):
         parser = CmdArgumentParser(prog="quit", description="Quit the debugger")
@@ -206,7 +238,7 @@ class VortexDebugger:
         elif args.disconnect:
             self.backend.transport_disconnect()
         else:
-            Logger.error("No transport specified. e.g. Use --tcp to connect via TCP.")
+            self.log.error("No transport specified. e.g. Use --tcp to connect via TCP.")
 
     def _cmd_reset(self, argv):
         parser = CmdArgumentParser(prog="reset", description="Reset the backend connection")
@@ -230,7 +262,7 @@ class VortexDebugger:
         if args.subcmd == "warps":
             wstatus = self.backend.get_warp_status(get_pc=True)
             if wstatus is None:
-                Logger.error("Failed to get warp status.")
+                self.log.error("Failed to get warp status.")
                 return
             wstatus_str = ""
             for wid, data in wstatus.items():
@@ -239,7 +271,7 @@ class VortexDebugger:
                 local_wid = wid % self.backend.plat_info['num_warps']
                 pcstr = f"0x{pc:08x}" if pc is not None else "N/A"
                 wstatus_str += f"\tCore{coreid}-W{local_wid} (wid: {wid}): {'Halted' if status else 'Running'} (PC: {pcstr})\n"
-            Logger.info(f"Warps status:\n{wstatus_str}")
+            self.log.info(f"Warps status:\n{wstatus_str}")
         else:
             self.backend._print_platform_info()
         
@@ -251,11 +283,11 @@ class VortexDebugger:
             return
         self.backend.halt_warps(args.warp_ids)
         if self.backend.all_halted():
-            Logger.info("All warps are halted.")
+            self.log.info("All warps are halted.")
         elif self.backend.any_halted():
-            Logger.info("Some warps are halted.")
+            self.log.info("Some warps are halted.")
         else:
-            Logger.warn("No warps are halted.")
+            self.log.warn("No warps are halted.")
 
     def _cmd_continue(self, argv):
         parser = CmdArgumentParser(prog="continue", description="Continue warp execution")
@@ -263,11 +295,15 @@ class VortexDebugger:
         args = parser.parse_args(argv)
         if args is None:
             return
-        self.backend.resume_warps(args.warp_ids)
-        if self.backend.any_halted():
-            Logger.info("Some warps are still halted.")
+        
+        if len(self.backend.breakpoints) > 0:
+            self.backend.continue_until_break()
         else:
-            Logger.info("All warps are running.")
+            self.backend.resume_warps(args.warp_ids)
+            if self.backend.any_halted():
+                self.log.info("Some warps are still halted.")
+            else:
+                self.log.info("All warps are running.")
 
     def _cmd_select(self, argv):
         parser = CmdArgumentParser(prog="select", description="Manage warps")
@@ -278,15 +314,15 @@ class VortexDebugger:
             return
         if 0 <= args.wid < self.backend.plat_info['num_total_warps']:
             self.backend.select_a_warp(args.wid)
-            Logger.info(f"Selected warp ID set to {args.wid}")
+            self.log.info(f"Selected warp ID set to {args.wid}")
         else:
-            Logger.error(f"Warp ID {args.wid} is out of range (0-{self.backend.plat_info['num_total_warps']-1})")
+            self.log.error(f"Warp ID {args.wid} is out of range (0-{self.backend.plat_info['num_total_warps']-1})")
             return
         if 0 <= args.tid < self.backend.plat_info['num_threads']:
             self.backend.select_a_thread(args.tid)
-            Logger.info(f"Selected thread ID set to {args.tid}")
+            self.log.info(f"Selected thread ID set to {args.tid}")
         else:
-            Logger.error(f"Thread ID {args.tid} is out of range (0-{self.backend.plat_info['num_threads']-1})")
+            self.log.error(f"Thread ID {args.tid} is out of range (0-{self.backend.plat_info['num_threads']-1})")
             return
 
     def _cmd_stepi(self, argv):
@@ -296,11 +332,11 @@ class VortexDebugger:
             return
         selected_wid = self.backend.get_selected_warp()
         if selected_wid is None:
-            Logger.error("No warp selected. Use 'select <id>' to select a warp.")
+            self.log.error("No warp selected. Use 'select <id>' to select a warp.")
             return       
         self.backend.step_warp()
         if self.backend.selected_warp_pc is not None:
-            Logger.info(f"Warp {selected_wid} stepped to PC=0x{self.backend.selected_warp_pc:X}")
+            self.log.info(f"Warp {selected_wid} stepped to PC=0x{self.backend.selected_warp_pc:X}")
 
 
     def _cmd_dmreg(self, argv):
@@ -323,13 +359,13 @@ class VortexDebugger:
             for name in args.names:
                 reg = self.backend._get_dmreg_by_name(name)
                 if reg is None:
-                    Logger.error(f"Unknown DM register: {name}")
+                    self.log.error(f"Unknown DM register: {name}")
                     continue
                 self.backend._print_dmreg(reg)
         elif args.subcmd == "write":
             reg = self.backend._get_dmreg_by_name(args.name)
             if reg is None:
-                Logger.error(f"Unknown DM register: {args.name}")
+                self.log.error(f"Unknown DM register: {args.name}")
                 return
             value = str2int(args.value)
             if args.field:
@@ -337,9 +373,9 @@ class VortexDebugger:
             else:
                 success = self.backend._dmreg_write(reg, value)
             if success:
-                Logger.info(f"Wrote 0x{value:X} to DM register {reg.name}{'.'+args.field if args.field else ''}.")
+                self.log.info(f"Wrote 0x{value:X} to DM register {reg.name}{'.'+args.field if args.field else ''}.")
             else:
-                Logger.error(f"Failed to write to DM register {reg.name}{'.'+args.field if args.field else ''}.")
+                self.log.error(f"Failed to write to DM register {reg.name}{'.'+args.field if args.field else ''}.")
         else:
             parser.print_help()
 
@@ -365,14 +401,14 @@ class VortexDebugger:
             for regname, val in regvals.items():
                 if val is not None:
                     regstr += f"{regname}: 0x{val:08x}\n"
-            Logger.info(f"Registers:\n{regstr}")
+            self.log.info(f"Registers:\n{regstr}")
         elif args.subcmd == "write":
             value = str2int(args.value)
             success = self.backend.write_reg(args.name, value)
             if success:
-                Logger.info(f"Wrote 0x{value:08x} to register {args.name}.")
+                self.log.info(f"Wrote 0x{value:08x} to register {args.name}.")
             else:
-                Logger.error(f"Failed to write to register {args.name}.")
+                self.log.error(f"Failed to write to register {args.name}.")
         else:
             parser.print_help()
 
@@ -399,19 +435,73 @@ class VortexDebugger:
             data = self.backend.read_mem(addr, length)
             if data is not None:
                 hexstr = hexdump(data, base_addr=addr)
-                Logger.info(f"Memory at 0x{addr:08x} ({length} bytes):\n{hexstr}")
+                self.log.info(f"Memory at 0x{addr:08x} ({length} bytes):\n{hexstr}")
             else:
-                Logger.error("Failed to read memory.")
+                self.log.error("Failed to read memory.")
         elif args.subcmd == "write":
             addr = str2int(args.address)
             data = [str2int(x) & 0xFF for x in args.data]
             success = self.backend.write_mem(addr, data)
             if success:
-                Logger.info(f"Wrote {len(data)} bytes to 0x{addr:08x}.")
+                self.log.info(f"Wrote {len(data)} bytes to 0x{addr:08x}.")
             else:
-                Logger.error("Failed to write memory.")
+                self.log.error("Failed to write memory.")
         else:
             parser.print_help()
+
+    def _cmd_break(self, argv):
+        parser = CmdArgumentParser(prog="break", description="Breakpoint operations")
+        subparsers = parser.add_subparsers(dest="subcmd", help="Sub-commands")
+
+        set_parser = subparsers.add_parser("set", help="Insert a breakpoint")
+        set_parser.add_argument("addr", help="Address to set the breakpoint at")
+
+        del_parser = subparsers.add_parser("del", help="Remove a breakpoint")
+        del_parser.add_argument("addr", help="Address of the breakpoint to remove", nargs="?")
+        del_parser.add_argument("-a", "--all", help="Remove all breakpoints", action="store_true")
+        
+        ls_parser = subparsers.add_parser("ls", help="List all breakpoints")
+
+        args = parser.parse_args(argv)
+        if args is None:
+            return
+
+        if args.subcmd == "set":
+            addr = str2int(args.addr)
+            success = self.backend.set_breakpoint(addr)
+            if success:
+                self.log.info(f"Breakpoint set at 0x{addr:08x}.")
+            else:
+                self.log.error(f"Failed to set breakpoint at 0x{addr:08x}.")
+        elif args.subcmd == "del":
+            if args.all:
+                bps = self.backend.get_breakpoints()
+                if not bps:
+                    self.log.info("No breakpoints to remove.")
+                    return
+                for addr in bps:
+                    self.backend.delete_breakpoint(addr)
+                self.log.info(f"Removed all breakpoints ({len(bps)} total).")
+                return
+            elif args.addr:
+                addr = str2int(args.addr)
+                success = self.backend.delete_breakpoint(addr)
+                if success:
+                    self.log.info(f"Breakpoint removed from 0x{addr:08x}.")
+                else:
+                    self.log.error(f"Failed to remove breakpoint from 0x{addr:08x}.")
+            else:
+                self.log.error("Specify an address to remove or use --all to remove all breakpoints.")
+        elif args.subcmd == "ls":
+            bps = self.backend.list_breakpoints()
+            if bps:
+                bpstr = "\n".join([f"0x{addr:08x}" for addr in bps])
+                self.log.info(f"Breakpoints:\n{bpstr}")
+            else:
+                self.log.info("No breakpoints set.")
+        else:
+            parser.print_help()
+
 
     
     def __setup_commands(self):
@@ -428,3 +518,45 @@ class VortexDebugger:
         self.__register_command("dmreg", alias="d", description="DM Register operations", func=self._cmd_dmreg)
         self.__register_command("reg", alias="r", description="Register operations", func=self._cmd_reg)
         self.__register_command("mem", alias="m", description="Memory operations", func=self._cmd_mem)
+        self.__register_command("break", alias="b", description="Breakpoint operations", func=self._cmd_break)
+
+
+
+################################################################################
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Vortex Debugger CLI")
+    parser.add_argument("-p", "--tcp", help="Connect via TCP (host:port)", type=str, default=None)
+    parser.add_argument("-g", "--gdbserver", help="Run as GDB server on specified port (port: 3333)", type=int, default=None)
+    parser.add_argument("-v", "--verbosity", help="Set verbosity level (0:error, 1:warn, 2:info, 3-5:debug)", type=int, choices=range(0,6), default=2)
+    parser.add_argument("--no-banner", help="Suppress banner display", action="store_true")
+    parser.add_argument("-s", "--script", help="Run commands from a script file", type=str, default=None)
+    args = parser.parse_args()
+
+    # Set verbosity level
+    Logger.set_verbosity(args.verbosity)
+
+    # Display banner
+    if not args.no_banner:
+        print(f"{ANSI_YLW}{BANNER}{ANSI_RST}")
+
+    dbg = VortexDebugger()
+
+    if args.tcp:       
+        dbg.connect_tcp(hostportstr=args.tcp)
+
+    if args.script:
+        dbg._run_script(args.script)
+
+    if args.gdbserver:
+        if dbg.backend.transport_is_connected():
+            dbg.start_gdbserver(args.gdbserver)
+        else:
+            dbg.log.error("Cannot start GDB server: No transport connected.")
+            return
+
+    dbg.run_cli()
+
+
+if __name__ == "__main__":
+    main()

@@ -136,10 +136,6 @@ module VX_fetch import VX_gpu_pkg::*; #(
     logic injecting;
     assign injecting = (inject_sm == INJECTSM_REQ);
 
-    // Goes high when the injected instruction is actually handed to decode
-    logic injected;
-    assign injected = (fetch_if.valid && fetch_if.ready) && (fetch_if.data.wid == schedule_if.inject_wid);
-
     always_ff @(posedge clk) begin
         if (reset) begin
             inject_sm <= INJECTSM_NONE;
@@ -151,7 +147,7 @@ module VX_fetch import VX_gpu_pkg::*; #(
                     end
                 end
                 INJECTSM_REQ: begin
-                    if (injecting && injected) begin // Inject when its safe
+                    if (injecting && (fetch_if.valid && fetch_if.ready) && (fetch_if.data.wid == schedule_if.inject_wid)) begin // Handed to decode
                         inject_sm <= INJECTSM_INFLIGHT;
                     end
                 end
