@@ -20,13 +20,17 @@ def packetify(msg: str) -> str:
 class GDBStub:
     def __init__(self, backend: Backend, port=3333):
         self.backend = backend
+        self.log = Logger("GDBStub")
+
         self.port = port
         self.sock = None
         self.client = None
         self.bp_set = set()
         self.is_attached = False
 
-        self.log = Logger("GDBStub")
+        self.threads = {}
+        self.current_thread = 0
+        self.__build_thread_map()
 
 
         # Map commands to handlers
@@ -48,6 +52,21 @@ class GDBStub:
             "qAttached": self.cmd_attached,
             "vMustReplyEmpty": self.cmd_notfound        # Should behave same as any other unknown command
         }
+
+
+    def __build_thread_map(self):
+        tid = 1
+        for core in range(self.backend.plat_info['num_total_cores']):
+            for warp in range(self.backend.plat_info['num_warps']):
+                for lane in range(self.backend.plat_info['num_threads']):
+                    self.threads[tid] = (core, warp, lane)
+                    tid += 1
+        self.current_tid = 1
+
+        # Print
+        for tid, (core, warp, lane) in self.threads.items():
+            self.log.debug(f"Thread {tid:>4d}: C {core}, W {warp}, T {lane}")
+            
 
     # -------------------------------------------------------------------------
     # Connection
@@ -166,7 +185,7 @@ class GDBStub:
     # desc: Query the reason behind the target halt
     # Reply: Signal that caused the target to stop
     def cmd_halted(self, cmdstr):
-        self.backend.halt_warps()
+        # self.backend.halt_warps()
         self.send_packet("S05")  # SIGTRAP
 
     # cmd: D:pid
