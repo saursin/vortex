@@ -347,13 +347,13 @@ class Backend:
         return True
 
 
-    def reset_platform(self, halt_warps=False):
+    def reset_platform(self, halt_warps=False, halt_warp_ids=None):
         """
         Reset the target platform. 
         If halt_warps is True, all warps will be halted after reset.
         """
         if halt_warps:
-            self.select_warps()  # Select all warps
+            self.select_warps(halt_warp_ids)
             self._dmreg_write(DMReg.DCTRL, 1, "resethaltreq")
 
         self.log.info("Resetting target platform...")
@@ -374,10 +374,13 @@ class Backend:
             # Wait for all warps to halt
             with timeout(TIMEOUT, "Timeout waiting for warps to halt after reset"):
                 while True:
-                    if self.all_halted():
+                    if halt_warp_ids is None and self.all_halted():
+                        self.log.info("All warps halted after reset.")
+                        break
+                    elif halt_warp_ids is not None and self.any_halted():
+                        self.log.info("Some warps halted after reset.")
                         break
                     sleep(TIMESTEP)
-            self.log.info("All warps halted after reset.")
 
         return True
 
@@ -397,7 +400,8 @@ class Backend:
             "num_threads":  2**getbits(plat, *DMReg.PLATFORM.value.fields["numthreads"])
         }
         platinfo["platform"] = PLATFORM_ID_MAP.get(platinfo["platform_id"], "Unknown")
-        platinfo["num_total_warps"] = platinfo["num_clusters"] * platinfo["num_cores"] * platinfo["num_warps"]
+        platinfo["num_total_cores"] = platinfo["num_clusters"] * platinfo["num_cores"]
+        platinfo["num_total_warps"] = platinfo["num_total_cores"] * platinfo["num_warps"]
 
         # Get ISA information
         # misa = self._read_reg("misa") # TODO
@@ -563,6 +567,11 @@ class Backend:
         """
         if warp_id is not None:
             self.select_a_warp(warp_id)
+
+        # if all warps halted, may cause deadlock (current warp may be waiting on others)
+        if self.all_halted():
+            self.log.warn("All warps are halted. Stepping a single warp may cause deadlock.")
+        
         self._dmreg_write(DMReg.DCTRL, 1, "stepreq")
 
         # Wait for stepstate to go to 0 (idle)

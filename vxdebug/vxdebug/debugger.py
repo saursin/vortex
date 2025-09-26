@@ -243,10 +243,11 @@ class VortexDebugger:
     def _cmd_reset(self, argv):
         parser = CmdArgumentParser(prog="reset", description="Reset the backend connection")
         parser.add_argument("-H", "--halt", help="Halt warps after reset", action="store_true")
+        parser.add_argument("warp_ids", nargs="*", type=int, help="Warp IDs to halt after reset (all warps unless specified)")
         args = parser.parse_args(argv)
         if args is None:
             return
-        self.backend.reset_platform(halt_warps=args.halt)
+        self.backend.reset_platform(halt_warps=args.halt, halt_warp_ids=args.warp_ids)
         self.backend.initialize()
 
     def _cmd_info(self, argv):
@@ -292,6 +293,7 @@ class VortexDebugger:
     def _cmd_continue(self, argv):
         parser = CmdArgumentParser(prog="continue", description="Continue warp execution")
         parser.add_argument("warp_ids", nargs="+", type=int, help="Warp IDs to continue")
+        parser.add_argument("-e", "--continue-except", help="Continue all warps except the specified ones", action="store_true")
         args = parser.parse_args(argv)
         if args is None:
             return
@@ -299,7 +301,12 @@ class VortexDebugger:
         if len(self.backend.breakpoints) > 0:
             self.backend.continue_until_break()
         else:
-            self.backend.resume_warps(args.warp_ids)
+            if args.continue_except:
+                all_wids = list(range(self.backend.plat_info['num_total_warps']))
+                warp_ids_to_continue = [wid for wid in all_wids if wid not in args.warp_ids]
+                self.backend.resume_warps(warp_ids_to_continue)
+            else:
+                self.backend.resume_warps(args.warp_ids)
             if self.backend.any_halted():
                 self.log.info("Some warps are still halted.")
             else:
