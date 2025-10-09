@@ -56,9 +56,22 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     parameter NUM_THREADS   = `NUM_THREADS,     // Number of threads per warp
     
     parameter NDMRESET_CYCLES     = 16,         // Number of cycles to assert ndmreset
-    parameter RESETHALTREQ_CYCLES = 4           // Number of cycles to assert resethaltreq
+    parameter RESETHALTREQ_CYCLES = 4,           // Number of cycles to assert resethaltreq
                                                 // (Atleast num of cycles to propogate reset to all cores + 1
                                                 // For vortex, 3 + 1, since reset is propogated to cores in 3 cycles)
+
+    // -----------------
+    parameter NUM_CORES_TOTAL  = NUM_CLUSTERS * NUM_CORES,     // Total number of cores in the system
+    parameter NUM_WARPS_TOTAL  = NUM_CORES_TOTAL * NUM_WARPS,  // Total number of warps in the system
+    
+    parameter NT_BITS          = `LOG2UP(NUM_THREADS),         // Number of bits needed to select a thread within a warp
+    
+    parameter NW_BITS          = `LOG2UP(NUM_WARPS),           // Number of bits needed to select a warp within a core
+    parameter NWT_BITS         = `LOG2UP(NUM_WARPS_TOTAL),     // Number of bits needed to select a warp within the system
+
+    // parameter NC_BITS          = `LOG2UP(NUM_CORES);           // Number of bits needed to select a core within a cluster
+    parameter NCT_BITS         = `LOG2UP(NUM_CORES_TOTAL),     // Number of bits needed to select a core within the system
+    parameter NWINSEL_BITS     = NUM_WARPS_TOTAL < 32 ? 1 : $clog2(NUM_WARPS_TOTAL/32)   // Number of bits needed to select 32-bit window of warps
 ) (
     input  wire                             clk,
     input  wire                             reset,
@@ -79,18 +92,6 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     ////////////////////////////////////////////////////////////////////////////////
     // Local parameters and variables       
-    localparam NUM_CORES_TOTAL  = NUM_CLUSTERS * NUM_CORES;     // Total number of cores in the system
-    localparam NUM_WARPS_TOTAL  = NUM_CORES_TOTAL * NUM_WARPS;  // Total number of warps in the system
-    
-    localparam NT_BITS          = `LOG2UP(NUM_THREADS);         // Number of bits needed to select a thread within a warp
-    
-    localparam NW_BITS          = `LOG2UP(NUM_WARPS);           // Number of bits needed to select a warp within a core
-    localparam NWT_BITS         = `LOG2UP(NUM_WARPS_TOTAL);     // Number of bits needed to select a warp within the system
-
-    // localparam NC_BITS          = `LOG2UP(NUM_CORES);           // Number of bits needed to select a core within a cluster
-    localparam NCT_BITS         = `LOG2UP(NUM_CORES_TOTAL);     // Number of bits needed to select a core within the system
-
-    localparam NWINSEL_BITS     = NUM_WARPS_TOTAL < 32 ? 1 : $clog2(NUM_WARPS_TOTAL/32);   // Number of bits needed to select 32-bit window of warps
 
     // Register addresses
     localparam PLATFORM_ADDR    = 4'h0;
