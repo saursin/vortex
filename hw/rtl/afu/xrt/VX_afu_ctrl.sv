@@ -60,6 +60,17 @@ module VX_afu_ctrl #(
     output wire                         dcr_wr_valid,
     output wire [`VX_DCR_ADDR_WIDTH-1:0] dcr_wr_addr,
     output wire [`VX_DCR_DATA_WIDTH-1:0] dcr_wr_data
+
+`ifdef EN_VXDBG
+    ,
+    // VX debug bus
+    output  wire [`VXDBGBUS_ADDRW-1:0]   vxdbg_addr,
+    input   wire [`VXDBGBUS_DATAW-1:0]   vxdbg_rdata,
+    output  wire [`VXDBGBUS_DATAW-1:0]   vxdbg_wdata,
+    output  wire                            vxdbg_we,
+    output  wire                            vxdbg_valid,
+    input   wire                            vxdbg_ack
+`endif
 );
 
     // Address Info
@@ -97,6 +108,11 @@ module VX_afu_ctrl #(
     // 0x40 : Low 32-bit Data signal of MEM
     // 0x44 : High 32-bit Data signal of MEM
     // 0x48 : Control signal of MEM
+    
+    // 0x50 : Debug bus address (Read/Write)
+    // 0x54 : Debug bus write data / read data (Read/Write)
+    // 0x58 : Debug bus control (bit 0 = WE, bit 1 = VALID, bit 2 = ACK)  (Read/Write)
+
     // (SC = Self Clear, COR = Clear on Read, TOW = Toggle on Write, COH = Clear on Handshake)
 
     // Parameters
@@ -118,6 +134,12 @@ module VX_afu_ctrl #(
     `ifdef SCOPE
         ADDR_SCP_0      = 8'h28,
         ADDR_SCP_1      = 8'h2C,
+    `endif
+
+    `ifdef EN_VXDBG
+        ADDR_DBG_ADDR   = 8'h50,  // write: debug address
+        ADDR_DBG_DATA   = 8'h54,  // write: debug data / read: debug data
+        ADDR_DBG_CTRL   = 8'h58,  // control: bit0 = WE, bit1 = VALID, bit2 = ACK
     `endif
 
         ADDR_BITS       = 8;
@@ -172,6 +194,13 @@ module VX_afu_ctrl #(
     reg [31:0]  dcra_r;
     reg [31:0]  dcrv_r;
     reg         dcr_wr_valid_r;
+
+`ifdef EN_VXDBG
+    reg [`VXDBGBUS_ADDRW-1:0] dbg_addr_r;
+    reg [`VXDBGBUS_DATAW-1:0] dbg_data_r;
+    reg                       dbg_we_r;
+    reg                       dbg_valid_r;
+`endif
 
     logic wready_stall;
     logic rvalid_stall;
@@ -305,7 +334,25 @@ module VX_afu_ctrl #(
             dcra_r <= '0;
             dcrv_r <= '0;
             dcr_wr_valid_r <= 0;
+        
+        `ifdef EN_VXDBG
+            dbg_addr_r <= '0;
+            dbg_data_r <= '0;
+            dbg_we_r <= 0;
+            dbg_valid_r <= 0;
+        `endif
+
         end else begin
+
+        `ifdef EN_VXDBG
+            // Clear valid once ack is received
+            if (dbg_valid_r && vxdbg_ack) begin
+                dbg_valid_r <= 1'b0;
+                if(!dbg_we_r) // read: capture read data
+                    dbg_data_r <= vxdbg_rdata[`VXDBGBUS_DATAW-1:0];
+            end
+        `endif
+
             dcr_wr_valid_r <= 0;
             ap_reset_r <= 0;
 
@@ -343,6 +390,23 @@ module VX_afu_ctrl #(
                     dcrv_r <= (s_axi_wdata & wmask) | (dcrv_r & ~wmask);
                     dcr_wr_valid_r <= 1;
                 end
+            
+            `ifdef EN_VXDBG
+                ADDR_DBG_ADDR: begin
+                    // Debug bus r/w address
+                    dbg_addr_r <= s_axi_wdata[`VXDBGBUS_ADDRW-1:0];
+                end
+                ADDR_DBG_DATA: begin
+                    // Debug bus write data
+                    dbg_data_r <= s_axi_wdata[`VXDBGBUS_DATAW-1:0];
+                end
+                ADDR_DBG_CTRL: begin
+                    // Debug bus control: bit0 = valid, bit1 = we
+                    dbg_we_r    <= s_axi_wdata[1];
+                    dbg_valid_r <= s_axi_wdata[0];
+                end
+            `endif
+
                 default:;
                 endcase
 
@@ -426,6 +490,19 @@ module VX_afu_ctrl #(
                 rdata <= scope_bus_rdata[63:32];
             end
         `endif
+
+        `ifdef EN_VXDBG
+            ADDR_DBG_ADDR: begin
+                rdata <= {{32-`VXDBGBUS_ADDRW{1'b0}}, dbg_addr_r};
+            end
+            ADDR_DBG_DATA: begin
+                rdata <= dbg_data_r[`VXDBGBUS_DATAW-1:0];
+            end
+            ADDR_DBG_CTRL: begin
+                rdata[0] <= dbg_valid_r;
+                rdata[1] <= dbg_we_r;
+            end
+        `endif
             default:;
         endcase
     end
@@ -439,5 +516,12 @@ module VX_afu_ctrl #(
     assign dcr_wr_valid = dcr_wr_valid_r;
     assign dcr_wr_addr  = `VX_DCR_ADDR_WIDTH'(dcra_r);
     assign dcr_wr_data  = `VX_DCR_DATA_WIDTH'(dcrv_r);
+
+`ifdef EN_VXDBG
+    assign vxdbg_addr  = dbg_addr_r;
+    assign vxdbg_wdata = dbg_data_r;
+    assign vxdbg_we    = dbg_we_r;
+    assign vxdbg_valid = dbg_valid_r;
+`endif
 
 endmodule

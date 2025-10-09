@@ -235,6 +235,16 @@ module VX_afu_wrap #(
 		end
 	end
 
+`ifdef EN_VXDBG
+    // VX debug bus
+    wire [`VXDBGBUS_ADDRW-1:0]   vxdbg_addr;
+    wire [`VXDBGBUS_DATAW-1:0]   vxdbg_rdata;
+    wire [`VXDBGBUS_DATAW-1:0]   vxdbg_wdata;
+    wire                         vxdbg_we;
+    wire                         vxdbg_valid;
+    wire                         vxdbg_ack;
+`endif
+
 	VX_afu_ctrl #(
 		.S_AXI_ADDR_WIDTH (C_S_AXI_CTRL_ADDR_WIDTH),
 		.S_AXI_DATA_WIDTH (C_S_AXI_CTRL_DATA_WIDTH)
@@ -281,6 +291,16 @@ module VX_afu_wrap #(
 		.dcr_wr_valid	(dcr_wr_valid),
 		.dcr_wr_addr	(dcr_wr_addr),
 		.dcr_wr_data	(dcr_wr_data)
+
+	`ifdef EN_VXDBG
+		,
+        .vxdbg_addr     (vxdbg_addr),
+        .vxdbg_rdata    (vxdbg_rdata),
+        .vxdbg_wdata    (vxdbg_wdata),
+        .vxdbg_we       (vxdbg_we),
+        .vxdbg_valid    (vxdbg_valid),
+        .vxdbg_ack      (vxdbg_ack)
+    `endif
 	);
 
 	wire [M_AXI_MEM_ADDR_WIDTH-1:0] m_axi_mem_awaddr_u [C_M_AXI_MEM_NUM_BANKS];
@@ -351,6 +371,15 @@ module VX_afu_wrap #(
 		.dcr_wr_valid	(dcr_wr_valid),
 		.dcr_wr_addr	(dcr_wr_addr),
 		.dcr_wr_data	(dcr_wr_data),
+
+	`ifdef EN_VXDBG
+        .vxdbg_addr     (vxdbg_addr),
+        .vxdbg_rdata    (vxdbg_rdata),
+        .vxdbg_wdata    (vxdbg_wdata),
+        .vxdbg_we       (vxdbg_we),
+        .vxdbg_valid    (vxdbg_valid),
+        .vxdbg_ack      (vxdbg_ack),
+    `endif
 
 		.busy			(vx_busy)
 	);

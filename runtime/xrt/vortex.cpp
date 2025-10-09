@@ -36,6 +36,16 @@
 #include <util.h>
 #include <vector>
 
+#include <iostream>
+
+#ifdef EN_VXDBG
+#include "debug_server.h"
+#define DBGSRV_DEFAULT_WAIT_TIMEOUT 60000 // 60 seconds
+#endif
+
+#include <mutex>
+
+
 using namespace vortex;
 
 #ifndef XRTSIM
@@ -50,6 +60,12 @@ using namespace vortex;
 #define MMIO_DCR_ADDR 0x20
 #define MMIO_SCP_ADDR 0x28
 #define MMIO_MEM_ADDR 0x30
+
+#ifdef EN_VXDBG
+#define MMIO_DBG_ADDR 0x50
+#define MMIO_DBG_DATA 0x54
+#define MMIO_DBG_CTL  0x58
+#endif
 
 #define CTL_AP_START (1 << 0)
 #define CTL_AP_DONE (1 << 1)
@@ -276,6 +292,28 @@ public:
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   #endif
 
+  #ifdef EN_VXDBG
+    // start debug server if DBGSRV env var is set to a valid port number
+    const char* dbgsrv_port_s = getenv("DBGSRV_PORT");
+    if (dbgsrv_port_s) {
+      int port = std::stoi(dbgsrv_port_s);
+      if (port > 0) {
+        std::cout << "[VXDBG] Starting debug server on port " << port << "...\n";
+        // Register debug bus read/write callbacks
+        debug_server_.start(port, {
+          .on_read_reg = [this](uint32_t addr, uint32_t* val) {
+            // std::cout << "[VXDBG] dmreg rd: " << std::hex << addr << "\n";
+            return this->vxdbgbus_read(addr, val);
+          },
+          .on_write_reg = [this](uint32_t addr, uint32_t val) {
+            // std::cout << "[VXDBG] dmreg wr: " << std::hex << addr << " = " << std::hex << val << "\n";
+            return this->vxdbgbus_write(addr, val);
+          }
+        });
+      }
+    }
+  #endif
+
     return 0;
   }
 
@@ -421,6 +459,7 @@ public:
   }
 
   int write_register(uint32_t addr, uint32_t value) {
+    std::lock_guard<std::mutex> lock(mmio_mutex_);
   #ifdef CPP_API
     xrtKernel_.write_register(addr, value);
   #else
@@ -433,6 +472,7 @@ public:
   }
 
   int read_register(uint32_t addr, uint32_t *value) {
+    std::lock_guard<std::mutex> lock(mmio_mutex_);
   #ifdef CPP_API
     *value = xrtKernel_.read_register(addr);
   #else
@@ -551,6 +591,31 @@ public:
       return err;
     });
 
+#ifdef EN_VXDBG
+    // wait for debugger connection if DBGSRV_PREKERN_WAIT env var != 0
+    const char* wait_env = getenv("DBGSRV_PREKERN_WAIT");
+    if (wait_env && std::stoi(wait_env) != 0) {
+      std::cout << "[VXDBG] Waiting for debugger connection...\n";
+      
+      int timeout = DBGSRV_DEFAULT_WAIT_TIMEOUT;
+      const char* timeout_s = getenv("DBGSRV_WAIT_TIMEOUT");
+      if (timeout_s) {
+        timeout = std::stoi(timeout_s);
+      }
+
+      if (!debug_server_.wait_for_client(timeout)) {
+        std::cerr << "[VXDBG] Timeout waiting for debugger\n";
+      }
+
+      if (debug_server_.is_connected()) {
+        std::cout << "[VXDBG] Debugger connected, Starting kernel execution...\n";
+      } else {
+        std::cout << "[VXDBG] No debugger connected, Starting kernel execution anyways...\n";
+      }
+    }
+#endif
+
+
     // start execution
     CHECK_ERR(this->write_register(MMIO_CTL_ADDR, CTL_AP_START), {
       return err;
@@ -590,6 +655,18 @@ public:
       timeout -= sleep_time_ms;
     };
 
+    #ifdef EN_VXDBG
+    // if debugger is connected, wait until it disconnects
+    char *dbg_env = getenv("DBGSRV_POSTKERN_WAIT");
+    if (dbg_env && std::stoi(dbg_env) != 0 && debug_server_.is_connected()) {
+      std::cout << "[VXDBG] Kernel finished, Waiting for debugger to disconnect...\n";
+      while (debug_server_.is_connected()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+      std::cout << "[VXDBG] Debugger disconnected, resuming host code execution.\n";
+    }
+    #endif
+
     return 0;
   }
 
@@ -607,6 +684,66 @@ public:
   int dcr_read(uint32_t addr, uint32_t *value) const {
     return dcrs_.read(addr, value);
   }
+
+#ifdef EN_VXDBG
+  // Debug bus read/write functions
+  int vxdbgbus_write(uint32_t addr, uint32_t value) {
+    // 1. Write debug address
+    CHECK_ERR(this->write_register(MMIO_DBG_ADDR, addr), {
+      return err;
+    });
+    // 2. Write debug data
+    CHECK_ERR(this->write_register(MMIO_DBG_DATA, value), {
+      return err;
+    });
+    // 3. Trigger transaction (bit0=VALID, bit1=WE)
+    CHECK_ERR(this->write_register(MMIO_DBG_CTL, 0b11), {
+      return err;
+    });
+
+    // 4. Poll until Valid is cleared
+    for (;;) {
+      uint32_t ctrl = 0;
+      CHECK_ERR(this->read_register(MMIO_DBG_CTL, &ctrl), {
+        return err;
+      });
+      if ((ctrl & 0x1) == 0) 
+        break;
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    
+    return 0;
+  }
+
+  int vxdbgbus_read(uint32_t addr, uint32_t* value) {
+    // 1. Write debug address
+    CHECK_ERR(this->write_register(MMIO_DBG_ADDR, addr), {
+      return err;
+    });
+    // 2. Trigger read (bit0=VALID)
+    CHECK_ERR(this->write_register(MMIO_DBG_CTL, 0b01), {
+      return err;
+    });
+
+    // 3. Poll until Valid is cleared
+    for (;;) {
+      uint32_t ctrl = 0;
+      CHECK_ERR(this->read_register(MMIO_DBG_CTL, &ctrl), {
+        return err;
+      });
+      if ((ctrl & 0x1) == 0) 
+        break;
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // 4. Read data from MMIO_DBG_DATA
+    CHECK_ERR(this->read_register(MMIO_DBG_DATA, value), {
+      return err;
+    });
+
+    return 0;
+  }
+#endif
 
   int mpm_query(uint32_t addr, uint32_t core_id, uint64_t *value) {
     uint32_t offset = addr - VX_CSR_MPM_BASE;
@@ -716,6 +853,13 @@ private:
     return 0;
   }
 
+#endif
+
+private:
+  std::mutex mmio_mutex_;
+
+#ifdef EN_VXDBG
+  DebugServer debug_server_;
 #endif
 };
 

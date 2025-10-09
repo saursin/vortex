@@ -79,6 +79,15 @@ module Vortex_axi import VX_gpu_pkg::*; #(
     input  wire [`VX_DCR_ADDR_WIDTH-1:0] dcr_wr_addr,
     input  wire [`VX_DCR_DATA_WIDTH-1:0] dcr_wr_data,
 
+`ifdef EN_VXDBG
+    // VX debug bus
+    input  wire [`VXDBGBUS_ADDRW-1:0]   vxdbg_addr,
+    output wire [`VXDBGBUS_DATAW-1:0]   vxdbg_rdata,
+    input  wire [`VXDBGBUS_DATAW-1:0]   vxdbg_wdata,
+    input  wire                         vxdbg_we,
+    input  wire                         vxdbg_valid,
+    output wire                         vxdbg_ack,
+`endif
     // Status
     output wire                         busy
 );
@@ -125,6 +134,15 @@ module Vortex_axi import VX_gpu_pkg::*; #(
         .dcr_wr_valid   (dcr_wr_valid),
         .dcr_wr_addr    (dcr_wr_addr),
         .dcr_wr_data    (dcr_wr_data),
+
+    `ifdef EN_VXDBG
+        .vxdbg_addr     (vxdbg_addr),
+        .vxdbg_rdata    (vxdbg_rdata),
+        .vxdbg_wdata    (vxdbg_wdata),
+        .vxdbg_we       (vxdbg_we),
+        .vxdbg_valid    (vxdbg_valid),
+        .vxdbg_ack      (vxdbg_ack),
+    `endif
 
         .busy           (busy)
     );
