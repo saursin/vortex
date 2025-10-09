@@ -24,7 +24,7 @@ interface VX_dm_core_if #(
 
     // Selected warp and thread for debug operations
     logic [`NW_BITS-1:0]   sel_wid;         // Selected warp id
-    logic [`NW_BITS-1:0]   sel_tid;         // Selected thread id
+    logic [`NT_BITS-1:0]   sel_tid;         // Selected thread id
 
     logic                  step_req;        // step request for selected warp
     logic [1:0]            step_state;      // state of step request for selected warp

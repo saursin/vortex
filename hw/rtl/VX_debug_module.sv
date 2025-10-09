@@ -150,8 +150,11 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     // Connect dselect_warpsel & dselect_threadsel to core interface signals
     for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin: g_warpsel_wid
+        logic [NWT_BITS-1:0] warpsel_wid_local_tmp;
+        `UNUSED_VAR(warpsel_wid_local_tmp)
+        assign warpsel_wid_local_tmp = dselect_warpsel % NUM_WARPS[NWT_BITS-1:0];
         logic [NW_BITS-1:0] warpsel_wid_local;
-        assign warpsel_wid_local = dselect_warpsel % NUM_WARPS[NW_BITS-1:0];
+        assign warpsel_wid_local = warpsel_wid_local_tmp[NW_BITS-1:0];
         assign dm_core_if[i].sel_wid = warpsel_wid_local[NW_BITS-1:0];  // Selected warp
         assign dm_core_if[i].sel_tid = dselect_threadsel[NT_BITS-1:0];  // Selected thread
     end
