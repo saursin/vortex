@@ -135,7 +135,8 @@ class VortexDebugger:
                     self.log.warn(f"Unknown command: {cmd_name}")
 
         except KeyboardInterrupt: # Ctrl + C
-            pass
+            print("")  # New line after Ctrl+C
+            self.log.info("Keyboard Interrupt received")
         finally:
             try:
                 readline.write_history_file(DEBUGGER_HISTORY_FILE)

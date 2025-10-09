@@ -48,6 +48,10 @@ class GDBStub:
             "Z": self.cmd_insert_bp,
             "z": self.cmd_remove_bp,
             "k": self.cmd_kill,
+            "Hc": self.cmd_thread_select,
+            "Hg": self.cmd_thread_select,
+            "vCont?": self.cmd_vcont_query,
+            # "qXfer:features:read:target.xml:": self.cmd_target_xml,
             "qSupported": self.cmd_supported,
             "qAttached": self.cmd_attached,
             "vMustReplyEmpty": self.cmd_notfound        # Should behave same as any other unknown command
@@ -342,4 +346,22 @@ class GDBStub:
         self.log.debug(f"Unknown Command: {cmdstr}, Skipping...")
         self.send_packet("")   # Empty response for unknown commands
 
+    # cmd: Hc/Hg thread-id
+    # desc: Set the current thread for subsequent operations
+    # reply: OK if successful
+    def cmd_thread_select(self, cmdstr):
+        self.send_packet("OK")
+
+    # cmd: vCont?
+    # desc: Query supported vCont actions
+    # reply: vCont;c;s
+    def cmd_vcont_query(self, cmdstr):
+        self.send_packet("vCont;c;s")
+
+    # cmd: qXfer:features:read:target.xml:offset,length
+    # desc: Read target XML description
+    # reply: l<chunk> or m<chunk> or l
+    def cmd_target_xml(self, cmdstr):
+        xml = "<target><architecture>riscv</architecture></target>"
+        self.send_packet(f"l{xml}")
     

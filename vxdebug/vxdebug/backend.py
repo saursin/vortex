@@ -4,9 +4,12 @@ from time import time, sleep
 from dataclasses import dataclass
 import subprocess, tempfile, struct, os
 import enum
+import shutil
 
-TIMEOUT    = 10     # Timeout for operations in seconds
+TIMEOUT    = 60     # Timeout for operations in seconds
 TIMESTEP   = 0.1    # Time step for polling operations
+
+RISCV_TOOLCHAIN_PREFIX = "riscv64-unknown-elf"
 
 PLATFORM_ID_MAP = {
     1: "Vortex"
@@ -131,8 +134,8 @@ def rvassemble(instr):
         # print(f"Assembly file:\n{open(asm_path).read()}")
 
         # Assemble to bin file & extract binary
-        subprocess.run(["riscv64-unknown-elf-as", asm_path, "-o", obj_path], check=True)
-        subprocess.run(["riscv64-unknown-elf-objcopy", "-O", "binary", obj_path, bin_path], check=True)
+        subprocess.run([f"{RISCV_TOOLCHAIN_PREFIX}-as", asm_path, "-o", obj_path], check=True)
+        subprocess.run([f"{RISCV_TOOLCHAIN_PREFIX}-objcopy", "-O", "binary", obj_path, bin_path], check=True)
 
         # Read the binary instructions (4 bytes at a time)
         instrs = []
@@ -166,6 +169,10 @@ class Backend:
         self.selected_warp_pc = None
 
         self.breakpoints = {}
+
+        # Check if riscv64-unknown-elf-gcc is available
+        if not shutil.which(f"{RISCV_TOOLCHAIN_PREFIX}-gcc"):
+            self.log.warn(f"{RISCV_TOOLCHAIN_PREFIX}-gcc not found in PATH. Instruction injection and any dependent functionality will not work.")
 
     def transport_setup(self, name: str):
         if name.lower() == "tcp":
@@ -321,6 +328,7 @@ class Backend:
         Wake up the Debug Module if it is disabled.
         """
         # Wait till ndmreset is cleared
+        self.log.debug("Waiting for ndmreset to clear (if set)...")
         with timeout(TIMEOUT, "Timeout waiting for ndmreset to clear"):
             while True:
                 ndmreset = self._dmreg_read(DMReg.DCTRL, "ndmreset")
