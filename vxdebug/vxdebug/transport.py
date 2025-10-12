@@ -6,11 +6,13 @@ from vxdebug.utils import *
 # Transport
 # Implementations for different transport layers (e.g. TCP)
 ################################################################################
+TRANSPORT_TIMEOUT = 30  # seconds
+
 
 class Transport:
-    def __init__(self, name):
+    def __init__(self, name, timeout=TRANSPORT_TIMEOUT):
         self.name = name
-        self.timeout = 10  # default timeout in seconds
+        self.timeout = timeout
 
     def connect(self, **kwargs):
         raise NotImplementedError("Subclasses should implement this!")
