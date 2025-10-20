@@ -4,12 +4,6 @@
 #include <string>
 #include <thread>
 
-#pragma once
-#include <atomic>
-#include <functional>
-#include <string>
-#include <thread>
-
 // Minimal threaded TCP debug server for register access
 class DebugServer {
 public:
@@ -24,6 +18,9 @@ public:
   // Start server in background
   void start(int port, Callbacks cb);
 
+  // Stop server and wait for clean shutdown
+  void stop();
+
   // Wait until a client connects (blocking)
   bool wait_for_client(int timeout_ms = -1);
 
@@ -32,9 +29,15 @@ public:
 
 private:
   void server_loop(int port);
+  void execute_command(const std::string &cmd);
 
   std::atomic<bool> running_{false};
   std::atomic<bool> connected_{false};
   Callbacks cb_;
+
+  // Server thread variables
+  int server_fd_ = -1;
+  int client_fd_ = -1;
+  std::string recv_buffer_;
   std::thread server_thread_;
 };

@@ -104,11 +104,11 @@ class TCPTransport(Transport):
     def reg_read(self, addr, num=1):
         rvals = []
         for regaddr in range(addr, addr + num):
-            self._send(f"r {regaddr:04x}")   # Read register command
+            self._send(f"r{regaddr:04x}")   # Read register command
             resp = self._receive()
-            if resp and resp.startswith("ACK"):
+            if resp and resp.startswith("+"):
                 try:
-                    rvals.append(int(resp.replace("ACK ", "").strip(), 16))
+                    rvals.append(int(resp.replace("+", "").strip(), 16))
                 except ValueError:
                     self.log.error(f"Invalid response for reg read: {resp}")
                     rvals.append(None)
@@ -122,9 +122,9 @@ class TCPTransport(Transport):
             raise ValueError("Value must be a list when writing multiple registers.")
         
         for regaddr in range(addr, addr + num):
-            self._send(f"w {regaddr:04X} {value:08X}")
+            self._send(f"w{regaddr:04X}:{value:08X}")
             resp = self._receive()
-            if not (resp and resp.startswith("ACK")):
+            if not (resp and resp.startswith("+")):
                 self.log.warn(f"Failed to write register at {regaddr:04x}")
                 return False
         return True

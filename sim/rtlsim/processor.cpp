@@ -482,8 +482,8 @@ private:
 
   void dbg_bus_eval(int clk) {
     static std::string cmd;
-    static uint32_t arg1;
-    static uint32_t arg2;
+    static uint32_t addr;
+    static uint32_t data;
     static enum { IDLE, ACTIVE} state = IDLE;
     static bool ack = false;
     
@@ -533,32 +533,41 @@ private:
 
       // Remove trailing newline characters
       line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+      cmd = line;
 
-      std::istringstream iss(line);
-      iss >> cmd;
-      if (cmd == "r") {
-        iss >> std::hex >> arg1;
+      printf("[DBGSERVER] Got: %s\n", line.c_str());
+
+      if (cmd[0] == 'r') {
+        addr = std::stoul(cmd.substr(1), nullptr, 16);
       }
-      else if (cmd == "w") {
-        iss >> std::hex >> arg1 >> arg2;
+      else if (cmd[0] == 'w') {
+        size_t col_pos = cmd.find(':');
+        if (col_pos == std::string::npos) {
+          printf("[DBGSERVER]: Malformed command: %s\n", cmd.c_str());
+          return;
+        }
+        try {
+          addr = std::stoul(cmd.substr(1, col_pos - 1), nullptr, 16);
+          data = std::stoul(cmd.substr(col_pos + 1), nullptr, 16);
+        } catch (const std::invalid_argument& e) {
+          printf("[DBGSERVER]: Malformed command: %s\n", cmd.c_str());
+          return;
+        }
       }
       else {
-        const char* errormsg = "ERR Unknown command\n";
-        send(client_fd, errormsg, strlen(errormsg), 0);
+        printf("[DBGSERVER]: Unknown command %c\n", cmd[0]);
         return;
       }
 
-//    printf("[DBGSERVER] Got: %s\n", line.c_str());
-
       // Drive bus signals
-      if(cmd == "r"){
-        device_->vxdbg_addr  = arg1;
+      if(cmd[0] == 'r'){
+        device_->vxdbg_addr  = addr;
         device_->vxdbg_valid = 1;
         device_->vxdbg_we    = 0;
       }
-      else if(cmd == "w"){
-        device_->vxdbg_addr  = arg1;
-        device_->vxdbg_wdata = arg2;
+      else if(cmd[0] == 'w'){
+        device_->vxdbg_addr  = addr;
+        device_->vxdbg_wdata = data;
         device_->vxdbg_valid = 1;
         device_->vxdbg_we    = 1;
       }
@@ -570,21 +579,21 @@ private:
       device_->vxdbg_wdata = 0;
       device_->vxdbg_valid = 0;
       device_->vxdbg_we    = 0;
-      if (cmd == "r") {
+      if (cmd[0] == 'r') {
         char ackmsg[64];
-        snprintf(ackmsg, sizeof(ackmsg), "ACK %08x\n", device_->vxdbg_rdata);
+        snprintf(ackmsg, sizeof(ackmsg), "+%08x\n", device_->vxdbg_rdata);
         send(client_fd, ackmsg, strlen(ackmsg), 0);
-//        printf("[DBGSERVER] Sent: %s", ackmsg);
+        printf("[DBGSERVER] Sent: %s", ackmsg);
       }
-      else if (cmd == "w") {
-        const char* ackmsg = "ACK\n";
+      else if (cmd[0] == 'w') {
+        const char* ackmsg = "+\n";
         send(client_fd, ackmsg, strlen(ackmsg), 0);
-//        printf("[DBGSERVER] Sent: %s", ackmsg);
+        printf("[DBGSERVER] Sent: %s", ackmsg);
       }
       state = IDLE;
       cmd = "";
-      arg1 = 0;
-      arg2 = 0;
+      addr = 0;
+      data = 0;
     }
   }
 #endif
