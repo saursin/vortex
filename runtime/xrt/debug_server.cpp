@@ -196,16 +196,16 @@ void DebugServer::execute_command(const std::string &cmd) {
   }
   // -------------------------------------------------------------
   else if (cmd[0] == 'w') {  // single write
-    size_t comma_pos = cmd.find(',');
-    if (comma_pos == std::string::npos) {
+    size_t colon_pos = cmd.find(':');
+    if (colon_pos == std::string::npos) {
       write_resp(false);  // parse error
       return;
     }
 
     uint32_t addr, val;
     try {
-      addr = std::stoul(cmd.substr(1, comma_pos - 1), nullptr, 16);
-      val  = std::stoul(cmd.substr(comma_pos + 1), nullptr, 16);
+      addr = std::stoul(cmd.substr(1, colon_pos - 1), nullptr, 16);
+      val  = std::stoul(cmd.substr(colon_pos + 1), nullptr, 16);
     } catch (...) {
       write_resp(false);  // parse error
       return;
