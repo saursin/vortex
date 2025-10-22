@@ -96,8 +96,13 @@ int main(int argc, char **argv) {
 #endif
 
 	// connect debugger
-	if(debugger_port != -1)
+	if(debugger_port != -1) {
+	#ifdef EN_VXDBG
 		processor.connect_debugger(debugger_port);
+	#else
+		std::cout << "Vxdebug not enabled" << std::endl;
+	#endif
+	}
 
 	// run simulation
 	processor.run();

@@ -69,9 +69,10 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     parameter NW_BITS          = `LOG2UP(NUM_WARPS),           // Number of bits needed to select a warp within a core
     parameter NWT_BITS         = `LOG2UP(NUM_WARPS_TOTAL),     // Number of bits needed to select a warp within the system
 
-    // parameter NC_BITS          = `LOG2UP(NUM_CORES);           // Number of bits needed to select a core within a cluster
-    parameter NCT_BITS         = `LOG2UP(NUM_CORES_TOTAL),     // Number of bits needed to select a core within the system
-    parameter NWINSEL_BITS     = NUM_WARPS_TOTAL < 32 ? 1 : $clog2(NUM_WARPS_TOTAL/32)   // Number of bits needed to select 32-bit window of warps
+    // parameter NC_BITS          = `LOG2UP(NUM_CORES);         // Number of bits needed to select a core within a cluster
+    parameter NCT_BITS         = `LOG2UP(NUM_CORES_TOTAL),      // Number of bits needed to select a core within the system
+    parameter NWINSEL_BITS     = NUM_WARPS_TOTAL < 32 ? 1 : $clog2(NUM_WARPS_TOTAL/32),  // Number of bits needed to select 32-bit window of warps
+    parameter NDMRESET_CTRW    = $clog2(NDMRESET_CYCLES)+1      // Number of bits needed to count NDMRESET_CYCLES
 ) (
     input  wire                             clk,
     input  wire                             reset,
@@ -120,6 +121,9 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     ////////////////////////////////////////
     // DSELECT register
+    logic dselect_we;
+    assign dselect_we = dmactive && (vxdbg_valid && vxdbg_we && (vxdbg_addr == DSELECT_ADDR));
+
     logic [NT_BITS-1:0]         dselect_threadsel;  // Selects the thread within the selected warp for debugging
     logic [NWT_BITS-1:0]        dselect_warpsel;    // Selects the warp globally for debugging
     logic [NWINSEL_BITS-1:0]    dselect_winsel;     // Selects which 32-bit window of WSTATUS/WMASK to access
@@ -141,7 +145,7 @@ module VX_debug_module import VX_gpu_pkg::*; #(
             dselect_threadsel   <= '0;
         end
         else begin
-            if(vxdbg_valid && vxdbg_we && (vxdbg_addr == DSELECT_ADDR)) begin
+            if(dselect_we) begin
                 dselect_winsel      <= vxdbg_wdata[22+:NWINSEL_BITS];
                 dselect_warpsel     <= vxdbg_wdata[7+:NWT_BITS];
                 dselect_threadsel   <= vxdbg_wdata[0+:NT_BITS];
@@ -149,25 +153,30 @@ module VX_debug_module import VX_gpu_pkg::*; #(
         end
     end
 
-    // Connect dselect_warpsel & dselect_threadsel to core interface signals
-    for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin: g_warpsel_wid
-        logic [NWT_BITS-1:0] warpsel_wid_local_tmp;
-        `UNUSED_VAR(warpsel_wid_local_tmp)
-        assign warpsel_wid_local_tmp = dselect_warpsel % NUM_WARPS[NWT_BITS-1:0];
-        logic [NW_BITS-1:0] warpsel_wid_local;
-        assign warpsel_wid_local = warpsel_wid_local_tmp[NW_BITS-1:0];
-        assign dm_core_if[i].sel_wid = warpsel_wid_local[NW_BITS-1:0];  // Selected warp
-        assign dm_core_if[i].sel_tid = dselect_threadsel[NT_BITS-1:0];  // Selected thread
-    end
-
-    // Determine which core the selected warp belongs to (globally)
+    // Determine which core the selected warp belongs to
     logic [NCT_BITS-1:0] selected_core_id;
-    wire [NWT_BITS-1:0] __core_div_result = dselect_warpsel / NUM_WARPS[NWT_BITS-1:0];
-    `UNUSED_VAR(__core_div_result)
-    assign selected_core_id = __core_div_result[NCT_BITS-1:0];
+    generate 
+        if (NUM_CORES == 1) begin : g_single_core
+            assign selected_core_id = '0;
+        end else begin : g_multi_core
+            assign selected_core_id = dselect_warpsel[NCT_BITS-1:NW_BITS];  // selected_core_id = dselect_warpsel / NUM_WARPS (assumes NUM_WARPS is power of 2)
+        end
+    endgenerate
+
+    // Determine the local warp id within the selected core
+    logic [NW_BITS-1:0] selected_core_local_wid;
+    assign selected_core_local_wid = dselect_warpsel[NW_BITS-1:0];  // selected_core_local_wid = dselect_warpsel % NUM_WARPS (assumes NUM_WARPS is power of 2)
+
+    // Connect dselect_warpsel & dselect_threadsel to core interface signals
+    for (genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin: g_warpsel_wid
+        assign dm_core_if[cid].sel_wid = selected_core_local_wid;     // core local warp id
+        assign dm_core_if[cid].sel_tid = dselect_threadsel;           // thread select within the warp
+    end
 
     ////////////////////////////////////////
     // WMASK register
+    logic wmask_we;
+    assign wmask_we = dmactive && (vxdbg_valid && vxdbg_we && (vxdbg_addr == WMASK_ADDR));
 
     // Warp mask array (all warps on all cores)
     logic [NUM_WARPS_TOTAL-1:0] warp_mask_arr;   // warp_mask[n] = 1 means warp n is selected for halt/resume
@@ -190,7 +199,7 @@ module VX_debug_module import VX_gpu_pkg::*; #(
             always_ff @(posedge clk) begin
                 if (reset || !dmactive) begin
                     warp_mask_arr <= '0;
-                end else if (vxdbg_valid && vxdbg_we && (vxdbg_addr == WMASK_ADDR)) begin
+                end else if (wmask_we) begin
                     warp_mask_arr <= vxdbg_wdata[NUM_WARPS_TOTAL-1:0];
                 end
             end
@@ -199,15 +208,16 @@ module VX_debug_module import VX_gpu_pkg::*; #(
             always_ff @(posedge clk) begin
                 if (reset || !dmactive) begin
                     warp_mask_arr <= '0;
-                end else if (vxdbg_valid && vxdbg_we && (vxdbg_addr == WMASK_ADDR)) begin
+                end else if (wmask_we) begin
                     warp_mask_arr[dselect_winsel*32 +: 32] <= vxdbg_wdata[31:0];
                 end
             end
         end
     endgenerate
 
-    for(genvar i = 0; i < NUM_WARPS_TOTAL; i++) begin: g_warp_mask
-        assign dm_core_if[i/NUM_WARPS].warp_mask[i%NUM_WARPS] = warp_mask_arr[i];
+   // Connect warp_mask_arr to core interface signals
+    for(genvar cid=0; cid < NUM_CORES_TOTAL; cid++) begin: g_debug_core_id
+        assign dm_core_if[cid].warp_mask = warp_mask_arr[cid*NUM_WARPS +: NUM_WARPS];
     end
 
 
@@ -216,8 +226,8 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     // Warp status array (all warps on all cores)
     logic [NUM_WARPS_TOTAL-1:0] warp_status_arr;    // warp_status[n] = 1 means warp n is halted
-    for(genvar i = 0; i < NUM_WARPS_TOTAL; i++) begin: g_warp_status
-        assign warp_status_arr[i] = dm_core_if[i/NUM_WARPS].warp_status[i%NUM_WARPS];
+    for(genvar cid=0; cid < NUM_CORES_TOTAL; cid++) begin: g_debug_core_status
+        assign warp_status_arr[cid*NUM_WARPS +: NUM_WARPS] = dm_core_if[cid].warp_status;
     end
 
     logic [31:0] wstatus_rdval;
@@ -236,11 +246,19 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     ////////////////////////////////////////
     // DCTRL register
 
+    logic dctrl_we;
+    assign dctrl_we = dmactive && (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR));
+    
+    // Ungated version of dctrl_we for dmactive logic
+    // When dmactive is low, only writes to dmactive bit should be considered
+    logic dctrl_we_ungated;
+    assign dctrl_we_ungated = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR));
+
     // dmactive logic
     always_ff @(posedge clk) begin
         if (reset) begin
             dmactive <= 1'b0;
-        end else if (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR)) begin
+        end else if (dctrl_we_ungated) begin
             dmactive <= vxdbg_wdata[31];
         end
     end
@@ -249,20 +267,18 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     logic dctrl_resumereq;
     logic dctrl_stepreq;
     logic dctrl_injreq;
-    assign dctrl_haltreq     = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[0]);
-    assign dctrl_resumereq   = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[1]) && !dctrl_haltreq; // enforce priority explictly
-    assign dctrl_stepreq     = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[3]) && !dctrl_haltreq && !dctrl_resumereq;
-    assign dctrl_injreq      = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[6]) && !dctrl_haltreq && !dctrl_resumereq && !dctrl_stepreq;
-   
+    // enforce priority explictly
+    assign dctrl_haltreq     = (dctrl_we && vxdbg_wdata[0]);
+    assign dctrl_resumereq   = (dctrl_we && vxdbg_wdata[1]) && !dctrl_haltreq;
+    assign dctrl_stepreq     = (dctrl_we && vxdbg_wdata[3]) && !dctrl_haltreq && !dctrl_resumereq;
+    assign dctrl_injreq      = (dctrl_we && vxdbg_wdata[6]) && !dctrl_haltreq && !dctrl_resumereq && !dctrl_stepreq;
+  
     // Ndmreset logic
-    logic dctrl_ndmreset;
-    assign dctrl_ndmreset = (vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[30]);
-
-    logic [4:0] ndmreset_ctr;
+    logic [NDMRESET_CTRW-1:0] ndmreset_ctr;
     always_ff @(posedge clk) begin
         if (reset || !dmactive) begin
             ndmreset_ctr <= '0;
-        end else if (dctrl_ndmreset) begin
+        end else if (dctrl_we && vxdbg_wdata[30]) begin
             ndmreset_ctr <= NDMRESET_CYCLES;
         end else if (ndmreset_ctr != 0) begin
             ndmreset_ctr <= ndmreset_ctr - 1'b1;
@@ -289,7 +305,7 @@ module VX_debug_module import VX_gpu_pkg::*; #(
                 resethaltreq_ctr <= RESETHALTREQ_CYCLES; // assert resethaltreq 
                 resethaltreq_pending <= 1'b0;
             end
-            else if(vxdbg_valid && vxdbg_we && (vxdbg_addr == DCTRL_ADDR) && vxdbg_wdata[2]) begin
+            else if(dctrl_we && vxdbg_wdata[2]) begin
                 resethaltreq_pending <= 1'b1;
             end
         end
@@ -298,20 +314,21 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     // select step_state from the core to which the warpsel_wid belongs
     logic [1:0] step_state_array [NUM_CORES_TOTAL];
     generate
-        for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin : g_step
-            assign step_state_array[i] = dm_core_if[i].step_state;
+        for (genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin : g_step
+            assign step_state_array[cid] = dm_core_if[cid].step_state;
         end
     endgenerate
 
     // Injection logic
     logic [1:0] inject_state_array [NUM_CORES_TOTAL];
     generate
-        for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin : g_inj_ack
-            assign inject_state_array[i] = dm_core_if[i].inject_state;
+        for (genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin : g_inj_ack
+            assign inject_state_array[cid] = dm_core_if[cid].inject_state;
         end
     endgenerate
 
-    logic [1:0] selected_step_state, selected_inject_state;
+    logic [1:0] selected_inject_state;
+    logic [1:0] selected_step_state;
     assign selected_step_state   = step_state_array[selected_core_id];
     assign selected_inject_state = inject_state_array[selected_core_id];
 
@@ -339,16 +356,16 @@ module VX_debug_module import VX_gpu_pkg::*; #(
         1'b0
     };
 
-    for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin: g_halt_resume
+    for (genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin: g_halt_resume
         // only assert halt_req/resume_req if any warp in this core is selected
-        assign dm_core_if[i].halt_req   = dmactive && (dctrl_haltreq || resethaltreq) && (|(warp_mask_arr[i*NUM_WARPS +: NUM_WARPS]));
-        assign dm_core_if[i].resume_req = dmactive && dctrl_resumereq && (|(warp_mask_arr[i*NUM_WARPS +: NUM_WARPS]));
+        assign dm_core_if[cid].halt_req   = dmactive && (dctrl_haltreq || resethaltreq) && (|(warp_mask_arr[cid*NUM_WARPS +: NUM_WARPS]));
+        assign dm_core_if[cid].resume_req = dmactive && dctrl_resumereq && (|(warp_mask_arr[cid*NUM_WARPS +: NUM_WARPS]));
 
         // Only assert step_req if the warpsel_wid belongs to this core
-        assign dm_core_if[i].step_req   = dmactive && dctrl_stepreq && (selected_core_id == i);
+        assign dm_core_if[cid].step_req   = dmactive && dctrl_stepreq && (selected_core_id == cid);
 
         // Only assert inject_req if the warpsel_wid belongs to this core
-        assign dm_core_if[i].inject_req = dmactive && dctrl_injreq && (selected_core_id == i);
+        assign dm_core_if[cid].inject_req = dmactive && dctrl_injreq && (selected_core_id == cid);
     end
 
 
@@ -366,9 +383,9 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     logic dpc_we;
     assign dpc_we = dmactive && (vxdbg_valid && vxdbg_we && (vxdbg_addr == DPC_ADDR));
-    for (genvar i = 0; i < NUM_CORES_TOTAL; i++) begin: g_dpc
-        assign dm_core_if[i].dpc_wdat = vxdbg_wdata[`PC_BITS:1];
-        assign dm_core_if[i].dpc_we   = dpc_we && (selected_core_id == i);
+    for (genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin: g_dpc
+        assign dm_core_if[cid].dpc_wdat = vxdbg_wdata[`PC_BITS:1];
+        assign dm_core_if[cid].dpc_we   = dpc_we && (selected_core_id == cid);
     end
 
 
@@ -394,22 +411,25 @@ module VX_debug_module import VX_gpu_pkg::*; #(
 
     ////////////////////////////////////////////////////////////////////////////////
     // Instruction Injection register
+    logic inject_we;
+    assign inject_we = dmactive && (vxdbg_valid && vxdbg_we && (vxdbg_addr == INJECT_ADDR));
+
     logic [`XLEN-1:0] inject_instr;
 
     logic [`XLEN-1:0] inject_rdval;
     assign inject_rdval = inject_instr;
 
     always_ff @(posedge clk) begin
-        if (reset) begin
+        if (reset || !dmactive) begin
             inject_instr <= '0;
         end 
-        else if(vxdbg_valid && vxdbg_we && (vxdbg_addr == INJECT_ADDR)) begin
-                inject_instr <= vxdbg_wdata;
+        else if(inject_we) begin
+            inject_instr <= vxdbg_wdata;
         end
     end
-    
-    for(genvar i = 0; i < NUM_CORES_TOTAL; i++) begin: g_inject_instr
-        assign dm_core_if[i].inject_instr = inject_instr;
+
+    for(genvar cid = 0; cid < NUM_CORES_TOTAL; cid++) begin: g_inject_instr
+        assign dm_core_if[cid].inject_instr = inject_instr;
     end
 
     
