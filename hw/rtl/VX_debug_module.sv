@@ -47,6 +47,8 @@
 
 `include "VX_define.vh"
 
+`define CEILDIV(num, denom)  (((num) + (denom) - 1) / (denom))
+
 module VX_debug_module import VX_gpu_pkg::*; #(
     parameter PLATFORM_ID  = 4'b0001,            // Vortex platform ID
 
@@ -61,18 +63,18 @@ module VX_debug_module import VX_gpu_pkg::*; #(
                                                 // For vortex, 3 + 1, since reset is propogated to cores in 3 cycles)
 
     // -----------------
-    parameter NUM_CORES_TOTAL  = NUM_CLUSTERS * NUM_CORES,     // Total number of cores in the system
-    parameter NUM_WARPS_TOTAL  = NUM_CORES_TOTAL * NUM_WARPS,  // Total number of warps in the system
+    parameter NUM_CORES_TOTAL   = NUM_CLUSTERS * NUM_CORES,     // Total number of cores in the system
+    parameter NUM_WARPS_TOTAL   = NUM_CORES_TOTAL * NUM_WARPS,  // Total number of warps in the system
     
-    parameter NT_BITS          = `LOG2UP(NUM_THREADS),         // Number of bits needed to select a thread within a warp
-    
-    parameter NW_BITS          = `LOG2UP(NUM_WARPS),           // Number of bits needed to select a warp within a core
-    parameter NWT_BITS         = `LOG2UP(NUM_WARPS_TOTAL),     // Number of bits needed to select a warp within the system
+    parameter NT_BITS           = `LOG2UP(NUM_THREADS),         // Number of bits needed to select a thread within a warp
 
-    // parameter NC_BITS          = `LOG2UP(NUM_CORES);         // Number of bits needed to select a core within a cluster
-    parameter NCT_BITS         = `LOG2UP(NUM_CORES_TOTAL),      // Number of bits needed to select a core within the system
-    parameter NWINSEL_BITS     = NUM_WARPS_TOTAL < 32 ? 1 : $clog2(NUM_WARPS_TOTAL/32),  // Number of bits needed to select 32-bit window of warps
-    parameter NDMRESET_CTRW    = $clog2(NDMRESET_CYCLES)+1      // Number of bits needed to count NDMRESET_CYCLES
+    parameter NW_BITS           = `LOG2UP(NUM_WARPS),           // Number of bits needed to select a warp within a core
+    parameter NWT_BITS          = `LOG2UP(NUM_WARPS_TOTAL),     // Number of bits needed to select a warp within the system
+
+    // parameter NC_BITS        = `LOG2UP(NUM_CORES);         // Number of bits needed to select a core within a cluster
+    parameter NCT_BITS          = `LOG2UP(NUM_CORES_TOTAL),      // Number of bits needed to select a core within the system
+    parameter NWINSEL_BITS      = (NUM_WARPS_TOTAL <= 32) ? 1 : $clog2(`CEILDIV(NUM_WARPS_TOTAL, 32)), // Number of bits needed to select 32-bit window of warps
+    parameter NDMRESET_CTRW     = $clog2(NDMRESET_CYCLES)+1      // Number of bits needed to count NDMRESET_CYCLES
 ) (
     input  wire                             clk,
     input  wire                             reset,
@@ -159,7 +161,7 @@ module VX_debug_module import VX_gpu_pkg::*; #(
         if (NUM_CORES == 1) begin : g_single_core
             assign selected_core_id = '0;
         end else begin : g_multi_core
-            assign selected_core_id = dselect_warpsel[NCT_BITS-1:NW_BITS];  // selected_core_id = dselect_warpsel / NUM_WARPS (assumes NUM_WARPS is power of 2)
+            assign selected_core_id = dselect_warpsel[NWT_BITS-1:NW_BITS];  // selected_core_id = dselect_warpsel / NUM_WARPS (assumes NUM_WARPS is power of 2)
         end
     endgenerate
 
