@@ -17,6 +17,7 @@ interface VX_dm_core_if #(
     parameter NUM_WARPS = `NUM_WARPS
 );
     // Warp status bits
+    logic [NUM_WARPS-1:0]  warp_active;     // Warp is active
     logic [NUM_WARPS-1:0]  warp_status;     // Current status of all warps
     logic [NUM_WARPS-1:0]  warp_mask;       // Warp mask for halt/resume operations
     logic                  halt_req;        // Request to halt selected warps
@@ -28,6 +29,7 @@ interface VX_dm_core_if #(
 
     logic                  step_req;        // step request for selected warp
     logic [1:0]            step_state;      // state of step request for selected warp
+    logic [2:0]            halt_cause;      // halt cause for selected warp
 
     // Debug PC
     logic [`PC_BITS-1:0]   dpc_rdat;        // current PC of the warp being debugged
@@ -39,12 +41,15 @@ interface VX_dm_core_if #(
     logic [1:0]            inject_state;    // state of instruction injection
     logic [`XLEN-1:0]      inject_instr;    // instruction to be injected
 
+    logic                  ebreak_halt;
+
     // Debug CSRs  for warp selected by sel_wid
     wire [`XLEN-1:0]       dscratch_rdat;   // read data from debug scratch register
     wire [`XLEN-1:0]       dscratch_wdat;   // write data to debug scratch register
     wire                   dscratch_we;     // write enable for debug scratch register
 
     modport master (
+        input  warp_active,
         input  warp_status,
         output warp_mask,
         output halt_req,
@@ -53,18 +58,21 @@ interface VX_dm_core_if #(
         output sel_tid,
         output step_req,
         input  step_state,
+        input  halt_cause,
         input  dpc_rdat,
         output dpc_wdat,
         output dpc_we,
         output inject_req,
         input  inject_state,
         output inject_instr,
+        output ebreak_halt,
         input  dscratch_rdat,
         output dscratch_wdat,
         output dscratch_we
     );
 
     modport slave (
+        output warp_active,
         output warp_status,
         input  warp_mask,
         input  halt_req,
@@ -73,12 +81,14 @@ interface VX_dm_core_if #(
         input  sel_tid,
         input  step_req,
         output step_state,
+        output halt_cause,
         output dpc_rdat,
         input  dpc_wdat,
         input  dpc_we,
         input  inject_req,
         output inject_state,
         input  inject_instr,
+        input  ebreak_halt,
         output dscratch_rdat,
         input  dscratch_wdat,
         input  dscratch_we

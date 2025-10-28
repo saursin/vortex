@@ -53,6 +53,9 @@ module VX_decode import VX_gpu_pkg::*; #(
     reg [`NR_BITS-1:0] rd_v, rs1_v, rs2_v, rs3_v;
     reg use_rd, use_rs1, use_rs2, use_rs3;
     reg is_wstall;
+`ifdef EN_VXDBG
+    reg is_ebreak;
+`endif
 
     wire [31:0] instr = fetch_if.data.instr;
     wire [6:0] opcode = instr[6:0];
@@ -164,6 +167,9 @@ module VX_decode import VX_gpu_pkg::*; #(
         use_rs2   = 0;
         use_rs3   = 0;
         is_wstall = 0;
+    `ifdef EN_VXDBG
+        is_ebreak = 0;
+    `endif
 
         case (opcode)
             `INST_I: begin
@@ -338,6 +344,12 @@ module VX_decode import VX_gpu_pkg::*; #(
                     use_rd  = 1;
                     is_wstall = 1;
                     `USED_IREG (rd);
+                `ifdef EN_VXDBG
+                    if(u_12 == 12'h0001 && rs1 == 5'd0 && func3 == 3'b000 && rd == 5'd0) begin
+                        // ebreak
+                        is_ebreak = 1;
+                    end
+                `endif
                 end
             end
         `ifdef EXT_F_ENABLE
@@ -560,6 +572,11 @@ module VX_decode import VX_gpu_pkg::*; #(
     assign decode_sched_if.valid  = fetch_fire;
     assign decode_sched_if.wid    = fetch_if.data.wid;
     assign decode_sched_if.unlock = ~is_wstall;
+
+// `UNUSED_VAR(is_ebreak)
+`ifdef EN_VXDBG
+    assign decode_sched_if.is_ebreak = is_ebreak;
+`endif // EN_VXDBG
 
 `ifndef L1_ENABLE
     assign fetch_if.ibuf_pop = decode_if.ibuf_pop;

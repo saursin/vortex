@@ -18,17 +18,26 @@ interface VX_decode_sched_if ();
     wire                    valid;
     wire                    unlock;
     wire [`NW_WIDTH-1:0]    wid;
+`ifdef EN_VXDBG
+    wire                    is_ebreak;
+`endif
 
     modport master (
         output valid,
         output unlock,
         output wid
+`ifdef EN_VXDBG
+        , output is_ebreak
+`endif
     );
 
     modport slave (
         input valid,
         input unlock,
         input wid
+`ifdef EN_VXDBG
+        , input is_ebreak
+`endif
     );
 
 endinterface

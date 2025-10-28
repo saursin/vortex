@@ -56,6 +56,13 @@ module VX_schedule import VX_gpu_pkg::*; #(
 `ifdef EN_VXDBG
     reg [`NUM_WARPS-1:0] halted_warps, halted_warps_n;  // set when a warp is halted (debugging)
     
+    localparam HACAUSE_NONE         = 3'b000;
+    localparam HACAUSE_EBREAK       = 3'b001;
+    localparam HACAUSE_HALTREQ      = 3'b010;
+    localparam HACAUSE_STEP         = 3'b011;
+    // localparam HACAUSE_RESETHALTREQ = 3'b100;
+    reg [`NUM_WARPS-1:0][2:0] halt_cause, halt_cause_n;
+    
     localparam STEP_NONE      = 2'b00;
     localparam STEP_REQ       = 2'b01;
     localparam STEP_INFLIGHT  = 2'b10;
@@ -126,6 +133,7 @@ module VX_schedule import VX_gpu_pkg::*; #(
         warp_pcs_n      = warp_pcs;
 `ifdef EN_VXDBG
         halted_warps_n  = halted_warps;
+        halt_cause_n    = halt_cause;
         step_n          = step;
         step_wid_n      = step_wid;
 `endif
@@ -227,14 +235,23 @@ module VX_schedule import VX_gpu_pkg::*; #(
         end
 
 `ifdef EN_VXDBG
-        // halt handling (debugging)
-        if (dm_core_if.halt_req) begin
-            halted_warps_n = halted_warps | dm_core_if.warp_mask;
+        if(dm_core_if.ebreak_halt && decode_sched_if.valid && decode_sched_if.is_ebreak) begin
+            // halt the warp on ebreak (priority: 3, Highest)
+            // - warp is locked till it reaches decode stage
+            // - when it dispatches from decode, we set the halted state
+            // - this means even if the warp is unlocked, scheduling won't happen since its now halted
+            halted_warps_n[decode_sched_if.wid] = 1;
+            halt_cause_n[decode_sched_if.wid] = HACAUSE_EBREAK;
         end
-        else if (dm_core_if.resume_req) begin
-            halted_warps_n = halted_warps & ~dm_core_if.warp_mask;
+        else if (dm_core_if.halt_req) begin
+            // halt request from debugger (priority: 1)
+            halted_warps_n = halted_warps | dm_core_if.warp_mask;
+            for (integer i = 0; i < `NUM_WARPS; ++i) begin
+                if (dm_core_if.warp_mask[i]) halt_cause_n[i] = HACAUSE_HALTREQ;
+            end
         end
         else if (step == STEP_NONE && dm_core_if.step_req) begin
+            // step request from debugger (priority: 0)
             step_n = STEP_REQ;
             halted_warps_n = halted_warps & ~(1 << dm_core_if.sel_wid);     // clear halted state for selected wid only
             step_wid_n = dm_core_if.sel_wid;
@@ -247,6 +264,13 @@ module VX_schedule import VX_gpu_pkg::*; #(
         // if we see step wid committed, then we can clear step
         else if(step == STEP_INFLIGHT && commit_sched_if.committed_warps[step_wid]) begin
             step_n = STEP_NONE;
+            halt_cause_n[step_wid] = HACAUSE_STEP;
+        end
+        else if (dm_core_if.resume_req) begin
+            halted_warps_n = halted_warps & ~dm_core_if.warp_mask;
+            for (integer i = 0; i < `NUM_WARPS; ++i) begin
+                if (dm_core_if.warp_mask[i]) halt_cause_n[i] = HACAUSE_NONE;
+            end
         end
         // PC write from debugger: allow only if the warp is halted
         // kept in else-if to avoid: step/resume/halting and PC write in same cycle
@@ -275,6 +299,7 @@ module VX_schedule import VX_gpu_pkg::*; #(
             wspawn.valid    <=  0;
         `ifdef EN_VXDBG
             halted_warps    <= '0;
+            halt_cause      <= {`NUM_WARPS{HACAUSE_NONE}};
             step            <= STEP_NONE;
             step_wid        <= '0;
         `endif
@@ -295,6 +320,7 @@ module VX_schedule import VX_gpu_pkg::*; #(
             is_single_warp <= (active_warps_cnt == $bits(active_warps_cnt)'(1));
         `ifdef EN_VXDBG
             halted_warps <= halted_warps_n;
+            halt_cause   <= halt_cause_n;
             step         <= step_n;
             step_wid     <= step_wid_n;
         `endif
@@ -378,8 +404,10 @@ module VX_schedule import VX_gpu_pkg::*; #(
     assign schedule_if.inject_committed = commit_sched_if.committed_warps[dm_core_if.sel_wid];
 
     // expose debug status
+    assign dm_core_if.warp_active = active_warps;
     assign dm_core_if.warp_status = halted_warps;
     assign dm_core_if.step_state  = step;
+    assign dm_core_if.halt_cause  = halt_cause[dm_core_if.sel_wid];
     assign dm_core_if.dpc_rdat    = warp_pcs[dm_core_if.sel_wid];
     assign dm_core_if.inject_state= schedule_if.inject_state;
 
