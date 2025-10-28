@@ -111,7 +111,7 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     localparam DSCRATCH_ADDR    = 4'h9;
 
     logic dmactive;
-    logic any_halted, all_halted, any_running, all_running;
+    logic any_halted, all_halted, any_running, all_running, any_unavail, all_unavail;
     
     ////////////////////////////////////////
     // PLATFORM register [read-only]
@@ -406,6 +406,8 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     assign all_halted  = &warp_status_arr;
     assign any_running = |(~warp_status_arr);
     assign all_running = &(~warp_status_arr);
+    assign any_unavail = |(~warp_active_arr);
+    assign all_unavail = &(~warp_active_arr);
     
     logic [31:0] dctrl_rdval;
     assign dctrl_rdval = {
@@ -415,7 +417,9 @@ module VX_debug_module import VX_gpu_pkg::*; #(
         any_halted,
         all_running,
         any_running,
-        14'b0,
+        any_unavail,
+        all_unavail,
+        12'b0,
         selected_hacause,       // hacause of core to which warpsel_wid belongs
         selected_inject_state, // inject_state of core to which warpsel_wid belongs
         1'b0,
@@ -505,15 +509,25 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     
     ////////////////////////////////////////////////////////////////////////////////
     // Debug bus interface logic
+    logic vxdbg_req_seen;
 
     always_ff @(posedge clk) begin
         if(reset) begin
+            vxdbg_req_seen <= 1'b0;
             vxdbg_rdata <= '0;
             vxdbg_ack <= 1'b0;
         end
         else begin
-            vxdbg_ack <= 1'b0;
-            if(vxdbg_valid && !vxdbg_ack) begin
+            vxdbg_ack <= 1'b0;  // default
+
+            if(!vxdbg_valid) begin
+                // Clear request seen flag when no valid request
+                vxdbg_req_seen <= 1'b0;
+            end
+            
+            if (vxdbg_valid && !vxdbg_req_seen) begin
+                // Mark request as seen and process it
+                vxdbg_req_seen <= 1'b1;
                 vxdbg_ack <= 1'b1;
 
                 if(!vxdbg_we) begin
