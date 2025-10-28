@@ -28,11 +28,19 @@ CP  = $(RISCV_TOOLCHAIN_PATH)/bin/$(RISCV_PREFIX)-objcopy
 CFLAGS += -O3 -mcmodel=medany -fno-exceptions -nostartfiles -nostdlib -fdata-sections -ffunction-sections
 CFLAGS += -I$(VORTEX_HOME)/kernel/include -I$(ROOT_DIR)/hw
 CFLAGS += -DXLEN_$(XLEN) -DNDEBUG
+CFLAGS += -g -O2
 
 LIBC_LIB += -L$(LIBC_VORTEX)/lib -lm -lc
 LIBC_LIB += $(LIBCRT_VORTEX)/lib/baremetal/libclang_rt.builtins-riscv$(XLEN).a
 
 LDFLAGS += -Wl,-Bstatic,--gc-sections,-T,$(VORTEX_HOME)/kernel/scripts/link$(XLEN).ld,--defsym=STARTUP_ADDR=$(STARTUP_ADDR) $(VORTEX_KN_PATH)/libvortex.a $(LIBC_LIB)
+
+# Debugserver port
+DBGSRV_PORT?=0
+RTLSIM_OPTS:=
+ifneq ($(DBGSRV_PORT),0)
+    RTLSIM_OPTS+= -p $(DBGSRV_PORT)
+endif
 
 all: $(PROJECT).elf $(PROJECT).bin $(PROJECT).dump
 
@@ -46,7 +54,7 @@ $(PROJECT).elf: $(SRCS)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 run-rtlsim: $(PROJECT).bin
-	$(ROOT_DIR)/sim/rtlsim/rtlsim $(PROJECT).bin
+	$(ROOT_DIR)/sim/rtlsim/rtlsim $(RTLSIM_OPTS) $(PROJECT).bin
 
 run-simx: $(PROJECT).bin
 	$(ROOT_DIR)/sim/simx/simx $(PROJECT).bin

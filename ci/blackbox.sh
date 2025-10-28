@@ -19,7 +19,7 @@ ROOT_DIR=$SCRIPT_DIR/..
 show_usage()
 {
     echo "Vortex BlackBox Test Driver v1.0"
-    echo "Usage: $0 [[--clusters=#n] [--cores=#n] [--warps=#n] [--threads=#n] [--l2cache] [--l3cache] [[--driver=#name] [--app=#app] [--args=#args] [--debug=#level] [--scope] [--perf=#class] [--rebuild=#n] [--log=logfile] [--help]]"
+    echo "Usage: $0 [[--clusters=#n] [--cores=#n] [--warps=#n] [--threads=#n] [--l2cache] [--l3cache] [[--driver=#name] [--app=#app] [--args=#args] [--debug=#level] [--scope] [--perf=#class] [--rebuild=#n] [--log=logfile] [--dbgsrv=port] [--help]]"
 }
 
 show_help()
@@ -52,6 +52,7 @@ DEFAULTS() {
     REBUILD=2
     TEMPBUILD=0
     LOGFILE=run.log
+    DBGSRV_PORT=0
 }
 
 parse_args() {
@@ -72,6 +73,7 @@ parse_args() {
             --args=*)   HAS_ARGS=1; ARGS=${i#*=} ;;
             --rebuild=*) REBUILD=${i#*=} ;;
             --log=*)    LOGFILE=${i#*=} ;;
+            --dbgsrv=*) DBGSRV_PORT=${i#*=} ;;
             --help)     show_help; exit 0 ;;
             *)          show_usage; exit 1 ;;
         esac
@@ -124,6 +126,7 @@ run_app() {
     [ $DEBUG -eq 1 ] && cmd_opts=$(add_option "$cmd_opts" "DEBUG=1")
     [ $TEMPBUILD -eq 1 ] && cmd_opts=$(add_option "$cmd_opts" "VORTEX_RT_PATH=\"$TEMPDIR\"")
     [ $HAS_ARGS -eq 1 ] && cmd_opts=$(add_option "$cmd_opts" "OPTS=\"$ARGS\"")
+    [ $DBGSRV_PORT -ne 0 ] && cmd_opts=$(add_option "$cmd_opts" "DBGSRV_PORT=$DBGSRV_PORT")
 
     if [ $DEBUG -ne 0 ]; then
         if [ -n "$cmd_opts" ]; then

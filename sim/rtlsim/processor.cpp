@@ -277,7 +277,10 @@ private:
   void reset() {
     this->mem_bus_reset();
     this->dcr_bus_reset();
+
+  #ifdef EN_VXDBG
     this->dbg_bus_reset();
+  #endif
 
     print_bufs_.clear();
 
@@ -304,12 +307,16 @@ private:
 
     device_->clk = 0;
     this->eval();
+  #ifdef EN_VXDBG
     this->dbg_bus_eval(0);
+  #endif
     this->mem_bus_eval(0);
 
     device_->clk = 1;
     this->eval();
+  #ifdef EN_VXDBG
     this->dbg_bus_eval(1);
+  #endif
     this->mem_bus_eval(1);
 
     dram_sim_.tick();

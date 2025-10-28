@@ -1034,6 +1034,18 @@ module vortex_afu import ccip_if_pkg::*; import local_mem_cfg_pkg::*; import VX_
         .dcr_wr_addr    (vx_dcr_wr_addr),
         .dcr_wr_data    (vx_dcr_wr_data),
 
+    `ifdef EN_VXDBG
+        /* verilator lint_off PINCONNECTEMPTY */
+        // TODO: Integrate into AFU
+        .vxdbg_addr     (),
+        .vxdbg_rdata    (),
+        .vxdbg_wdata    (),
+        .vxdbg_we       (),
+        .vxdbg_valid    (),
+        .vxdbg_ack      (),
+        /* verilator lint_on PINCONNECTEMPTY */
+    `endif
+
         // Status
         .busy           (vx_busy)
     );

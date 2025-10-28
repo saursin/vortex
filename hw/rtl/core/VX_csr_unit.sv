@@ -106,9 +106,10 @@ module VX_csr_unit import VX_gpu_pkg::*; #(
         .write_uuid     (execute_if.data.uuid),
         .write_wid      (execute_if.data.wid),
         .write_addr     (csr_addr),
-        .write_data     (csr_write_data),
+        .write_data     (csr_write_data)
     
     `ifdef EN_VXDBG
+        ,
         .dbg_dscratch_wid   (sched_csr_if.dbg_dscratch_wid),
         .dbg_dscratch_rdat  (sched_csr_if.dbg_dscratch_rdat),
         .dbg_dscratch_wdat  (sched_csr_if.dbg_dscratch_wdat),

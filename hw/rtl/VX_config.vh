@@ -319,7 +319,7 @@
 
 
 // Debug Configuration /////////////////////////////////////////////////////////
-`ifndef EN_VXDBG_DISABLE
+`ifndef VXDBG_DISABLE
 `define EN_VXDBG
 `endif
 
