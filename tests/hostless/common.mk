@@ -26,7 +26,7 @@ CP  = $(LLVM_VORTEX)/bin/llvm-objcopy
 # CP  = $(RISCV_TOOLCHAIN_PATH)/bin/$(RISCV_PREFIX)-objcopy
 
 CFLAGS += -O3 -mcmodel=medany -fno-exceptions -nostartfiles -nostdlib -fdata-sections -ffunction-sections
-CFLAGS += -I$(VORTEX_HOME)/kernel/include -I$(ROOT_DIR)/hw
+CFLAGS += -I$(VORTEX_HOME)/kernel/include -I$(ROOT_DIR)/hw -I$(VORTEX_HOME)/tests/hostless/common
 CFLAGS += -DXLEN_$(XLEN) -DNDEBUG
 
 LIBC_LIB += -L$(LIBC_VORTEX)/lib -lm -lc

@@ -2,35 +2,7 @@
 #include <vx_intrinsics.h>
 #include <vx_spawn.h>
 #include <vx_print.h>
-
-////////////////////////////////////////////////////////////////////////////////
-// Very Simple Malloc implementation
-// We'll replace this with a more sohpisticated one later taht uses a free list 
-// and a memory pool that's defined in the linker script. 
-// For now, lets assume that we have a memory pool that is defined as a global
-// array of bytes.
-
-#define HEAP_SZ 1024*1024
-
-char __data_pool[HEAP_SZ];      // pool
-int __data_pool_offset = 0;     // Tracks how much memory has been used
-
-// We'll hook this function to the vx_mem_alloc function in the future
-void* vx_malloc(int sz) {
-    if (__data_pool_offset + sz > HEAP_SZ) {
-        vx_printf("Out of memory\n");
-        return nullptr;
-    }
-
-    void* ptr = &__data_pool[__data_pool_offset];
-    __data_pool_offset += sz;
-    return ptr;
-}
-
-// we'll hook this function to the vx_mem_free function in the future
-void vx_free(void* ptr) {
-    // Do nothing
-}
+#include "utils.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel
@@ -62,9 +34,6 @@ int main() {
     // the buffers and the kernel arguments.
     vx_printf(">> Starting host part of the code in hostless mode (coreid=%d, warpid=%d. threadid=%d)\n", 
         vx_core_id(), vx_warp_id(), vx_thread_id());
-
-    vx_printf(">> Malloc Pool address: %p\n", __data_pool);
-    vx_printf(">> Malloc Pool size: %d\n", HEAP_SZ);
 
     // Allocate buffers
     vx_printf(">> Allocating buffers\n");
