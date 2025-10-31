@@ -110,7 +110,7 @@ bool compare_matrices(float* C1, float* C2, int M, int N) {
         for (int n = 0; n < N; n++) {
             float diff = C1[m * N + n] - C2[m * N + n];
             if (diff < -0.01f || diff > 0.01f) {
-                vx_printf(">> MISMATCH at C[%d][%d]: C1=%f, C2=%f\n", m, n, C1[m*N + n], C2[m*N + n]);
+                vx_printf("ERROR: Mismatch at C[%d][%d]: C1=%f, C2=%f\n", m, n, C1[m*N + n], C2[m*N + n]);
                 return false;
             }
         }
@@ -118,62 +118,52 @@ bool compare_matrices(float* C1, float* C2, int M, int N) {
     return true;
 }
 
+void initialize_matrix(float* mat, int rows, int cols, bool random=true) {
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            mat[r * cols + c] = random ? (float)(vx_rand() % 100) : 0.0f;
+        }
+    }
+}
 
-int main() {
-    // We start in single threaded mode 
-    // core0, thread0 runs the host part of the program and initializes
-    // the buffers and the kernel arguments.
-    vx_printf(">> Starting host part of the GEMM test in hostless mode (coreid=%d, warpid=%d, threadid=%d)\n", 
-        vx_core_id(), vx_warp_id(), vx_thread_id());
+////////////////////////////////////////////////////////////////////////////////
 
-    vx_printf(">> Hostless GEMM Test\n");
+// Global variables visible to all cores
+float* A;
+float* B;
+float* C;
+float* C_tiled;
+float* C_ref;
 
-    const int M = 16;
-    const int N = 16;
-    const int K = 16;
-    
-    // Allocate matrices using our simple heap allocator
-    vx_printf(">> Allocating matrices\n");
-    float* A = (float*)vx_malloc(M * K * sizeof(float));
-    float* B = (float*)vx_malloc(K * N * sizeof(float));
-    float* C_ref = (float*)vx_malloc(M * N * sizeof(float));
-    float* C_simple = (float*)vx_malloc(M * N * sizeof(float));
-    float* C_tiled = (float*)vx_malloc(M * N * sizeof(float));
+gemm_args_t args;
 
-    vx_printf(">> Matrix A address: %p\n", A);
-    vx_printf(">> Matrix B address: %p\n", B);
-    vx_printf(">> Matrix C_ref address: %p\n", C_ref);
-    vx_printf(">> Matrix C_simple address: %p\n", C_simple);
-    vx_printf(">> Matrix C_tiled address: %p\n", C_tiled);
+int gemm(int test_no, int M, int N, int K) {
+    int core_id = vx_core_id();
 
-    rand_seed(0x123);
-    bool all_passed = true;
-    for (int i=0; i<NUM_TESTS; i++) {
-        vx_printf(">> ========== Test %d ==========\n", i+1);
-        
+    if(core_id == 0) {
+        vx_printf("===== Test %d: GEMM of (%dx%d) x (%dx%d) matrices =====\n", test_no, M, K, K, N);
+        // Allocate matrices using our simple heap allocator
+        vx_printf(">> Allocating matrices\n");
+        A = (float*)vx_malloc(M * K * sizeof(float));
+        B = (float*)vx_malloc(K * N * sizeof(float));
+        C = (float*)vx_malloc(M * N * sizeof(float));
+        C_tiled = (float*)vx_malloc(M * N * sizeof(float));
+        C_ref = (float*)vx_malloc(M * N * sizeof(float));
+
+        vx_printf(">> Matrix A address: %p\n", A);
+        vx_printf(">> Matrix B address: %p\n", B);
+        vx_printf(">> Matrix C address: %p\n", C);
+        vx_printf(">> Matrix C_ref address: %p\n", C_ref);
+
         // Initialize matrices A and B with random values
-        for (int m = 0; m < M; m++) {
-            for (int k = 0; k < K; k++) {
-                A[m*K + k] = (float)(rand() % 100);
-            }
-        }
-        for (int k = 0; k < K; k++) {
-            for (int n = 0; n < N; n++) {
-                B[k*N + n] = (float)(rand() % 100);
-            }
-        }
-        
-        // Initialize all output matrices to zero
-        for (int m = 0; m < M; m++) {
-            for (int n = 0; n < N; n++) {
-                C_ref[m*N + n] = 0.0f;
-                C_simple[m*N + n] = 0.0f;
-                C_tiled[m*N + n] = 0.0f;
-            }
-        }
+        initialize_matrix(A, M, K, true);
+        initialize_matrix(B, K, N, true);
+        initialize_matrix(C, M, N, false);
+        initialize_matrix(C_tiled, M, N, false);
+        initialize_matrix(C_ref, M, N, false);
 
         // 1. CPU Reference Implementation
-        vx_printf(">> Running CPU Reference GEMM\n");
+        vx_printf(">> Running Reference GEMM\n");
         gemm_args_t ref_args;
         ref_args.A = A;
         ref_args.B = B;
@@ -182,73 +172,69 @@ int main() {
         ref_args.N = N;
         ref_args.K = K;
         gemm_ref(&ref_args);
-        vx_printf(">> CPU Reference completed\n");
 
-        // 2. GPU Simple Kernel (No Tiling)
-        vx_printf(">> Running GPU Simple GEMM (no tiling)\n");
-        gemm_args_t simple_args;
-        simple_args.A = A;
-        simple_args.B = B;
-        simple_args.C = C_simple;
-        simple_args.M = M;
-        simple_args.N = N;
-        simple_args.K = K;
-        
-        const uint32_t BLOCK_SIZE = 4;  // 4x4 threads per block for 16x16 matrices
-        uint32_t grid_dim[2] = {(M + BLOCK_SIZE - 1) / BLOCK_SIZE, (N + BLOCK_SIZE - 1) / BLOCK_SIZE};
-        uint32_t block_dim[2] = {BLOCK_SIZE, BLOCK_SIZE};
-        
-        vx_spawn_threads(2, grid_dim, block_dim, (vx_kernel_func_cb)gemm_kernel_simple, &simple_args);
-        vx_printf(">> GPU Simple GEMM completed\n");
+        vx_printf(">> Running GPU GEMM\n");
+        args.A = A;
+        args.B = B;
+        args.C = C;
+        args.M = M;
+        args.N = N;
+        args.K = K;
+    }
 
-        // 3. GPU Tiled Kernel
-        vx_printf(">> Running GPU Tiled GEMM (with tiling)\n");
-        gemm_args_t tiled_args;
-        tiled_args.A = A;
-        tiled_args.B = B;
-        tiled_args.C = C_tiled;
-        tiled_args.M = M;
-        tiled_args.N = N;
-        tiled_args.K = K;
-        
-        vx_spawn_threads(2, grid_dim, block_dim, (vx_kernel_func_cb)gemm_kernel_tiled, &tiled_args);
-        vx_printf(">> GPU Tiled GEMM completed\n");
+    vx_global_barrier();
 
+    const uint32_t BLOCK_SIZE = 4;  // 4x4 threads per block for 16x16 matrices
+    uint32_t grid_dim[2] = {(M + BLOCK_SIZE - 1) / BLOCK_SIZE, (N + BLOCK_SIZE - 1) / BLOCK_SIZE};
+    uint32_t block_dim[2] = {BLOCK_SIZE, BLOCK_SIZE};   
+    vx_spawn_threads(2, grid_dim, block_dim, (vx_kernel_func_cb)gemm_kernel_simple, &args);
+
+    vx_global_barrier();
+
+    if(core_id == 0) {
+        vx_printf(">> Running Tiled GPU GEMM\n");
+        args.C = C_tiled;
+    }
+
+    vx_global_barrier();
+
+    vx_spawn_threads(2, grid_dim, block_dim, (vx_kernel_func_cb)gemm_kernel_tiled, &args);
+    vx_global_barrier();
+
+    if(core_id == 0) {
         // Verify results
-        bool simple_pass = compare_matrices(C_simple, C_ref, M, N);
+        bool simple_pass = compare_matrices(C, C_ref, M, N);
         bool tiled_pass = compare_matrices(C_tiled, C_ref, M, N);
         
         if (simple_pass) {
-            vx_printf(">> Simple Kernel: PASSED\n");
+            vx_printf(">> GEMM: PASSED\n");
         } else {
-            vx_printf(">> Simple Kernel: FAILED\n");
-            all_passed = false;
+            vx_printf(">> GEMM: FAILED\n");
         }
         
         if (tiled_pass) {
-            vx_printf(">> Tiled Kernel: PASSED\n");
+            vx_printf(">> Tiled GEMM: PASSED\n");
         } else {
-            vx_printf(">> Tiled Kernel: FAILED\n");
-            all_passed = false;
+            vx_printf(">> Tiled GEMM: FAILED\n");
         }
-        
-        if (simple_pass && tiled_pass) {
-            vx_printf(">> Test %d: ALL IMPLEMENTATIONS PASSED\n", i+1);
-        } else {
-            vx_printf(">> Test %d: SOME IMPLEMENTATIONS FAILED\n", i+1);
-        }
-    }
 
-    if (all_passed) {
-        vx_printf(">> ALL TESTS PASSED\n");
-    } else {
-        vx_printf(">> SOME TESTS FAILED\n");
+        // Free matrices
+        vx_free(A);
+        vx_free(B);
+        vx_free(C);
+        vx_free(C_tiled);
+        vx_free(C_ref);
     }
+    return 0;
+}
 
-    vx_free(A);
-    vx_free(B);
-    vx_free(C_ref);
-    vx_free(C_simple);
-    vx_free(C_tiled);
+
+int main() {
+    for (int t = 0; t < NUM_TESTS; t++) {
+        int M = 4 * (t + 1);
+        int N = 4 * (t + 1);
+        int K = 4 * (t + 1);
+        gemm(t+1, M, N, K);
+    }
     return 0;
 }
