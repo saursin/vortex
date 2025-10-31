@@ -156,6 +156,8 @@ void vx_heap_stats() {
 ////////////////////////////////////////////////////////////////////////////////
 static unsigned __vx_rand_state = 1;
 
+#define RAND_MAX 32767
+
 void vx_rand_seed(unsigned seed) {
     __vx_rand_state = seed;
 }
