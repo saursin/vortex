@@ -542,7 +542,7 @@ private:
       line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
       cmd = line;
 
-      printf("[DBGSERVER] Got: %s\n", line.c_str());
+      // printf("[DBGSERVER] Got: %s\n", line.c_str());
 
       if (cmd[0] == 'r') {
         addr = std::stoul(cmd.substr(1), nullptr, 16);
@@ -590,12 +590,12 @@ private:
         char ackmsg[64];
         snprintf(ackmsg, sizeof(ackmsg), "+%08x\n", device_->vxdbg_rdata);
         send(client_fd, ackmsg, strlen(ackmsg), 0);
-        printf("[DBGSERVER] Sent: %s", ackmsg);
+        // printf("[DBGSERVER] Sent: %s", ackmsg);
       }
       else if (cmd[0] == 'w') {
         const char* ackmsg = "+\n";
         send(client_fd, ackmsg, strlen(ackmsg), 0);
-        printf("[DBGSERVER] Sent: %s", ackmsg);
+        // printf("[DBGSERVER] Sent: %s", ackmsg);
       }
       state = IDLE;
       cmd = "";

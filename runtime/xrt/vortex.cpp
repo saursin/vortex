@@ -612,6 +612,9 @@ public:
       } else {
         std::cout << "[VXDBG] No debugger connected, Starting kernel execution anyways...\n";
       }
+
+      std::cout  << "[VXDBG] Waiting for start signal from debugger...\n";
+      debug_server_.wait_for_start_signal();
     }
 #endif
 

@@ -27,6 +27,8 @@ public:
   // Return true if connected
   bool is_connected() const { return connected_.load(); }
 
+  // Wait for "start" signal from connected debugger
+  void wait_for_start_signal();
 private:
   void server_loop(int port);
   void execute_command(const std::string &cmd);
@@ -40,4 +42,5 @@ private:
   int client_fd_ = -1;
   std::string recv_buffer_;
   std::thread server_thread_;
+  volatile bool signal_start_ = false;
 };

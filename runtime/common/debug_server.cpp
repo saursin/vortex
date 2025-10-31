@@ -42,6 +42,20 @@ bool DebugServer::wait_for_client(int timeout_ms) {
   return true;
 }
 
+void DebugServer::wait_for_start_signal() {
+  while(!signal_start_) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    asm volatile("");
+  }
+
+  char *dbg_env = getenv("DBGSRV_START_DELAY_MS");
+  uint32_t wait_time = 500;
+  if (dbg_env) {
+    wait_time = atoi(dbg_env);
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(wait_time));
+}
+
 void DebugServer::server_loop(int port) {
   server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (server_fd_ < 0) {
@@ -270,6 +284,10 @@ void DebugServer::execute_command(const std::string &cmd) {
   else if (cmd[0] == 'q') {
     write_resp(true);
     running_.store(false);
+  }
+  else if(cmd[0] == 's') {
+    signal_start_ = true;
+    write_resp(true);
   }
   else {
     write_resp(false);
