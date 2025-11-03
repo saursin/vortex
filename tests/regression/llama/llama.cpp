@@ -272,10 +272,16 @@ float* forward(Transformer* transformer, int token, int pos) {
         s->k = s->key_cache + loff + pos * kv_dim;
         s->v = s->value_cache + loff + pos * kv_dim;
 
-        // qkv matmuls for this position
-        matmul(s->q, s->xb, w->wq + l*dim*dim, dim, dim);
-        matmul(s->k, s->xb, w->wk + l*dim*kv_dim, dim, kv_dim);
-        matmul(s->v, s->xb, w->wv + l*dim*kv_dim, dim, kv_dim);
+        // qkv matmuls for this position - use batched operation for efficiency
+        if(use_vortex) {
+            vx_matmul_qkv_batch(s->q, s->k, s->v, s->xb, 
+                               w->wq + l*dim*dim, w->wk + l*dim*kv_dim, w->wv + l*dim*kv_dim,
+                               dim, kv_dim);
+        } else {
+            matmul(s->q, s->xb, w->wq + l*dim*dim, dim, dim);
+            matmul(s->k, s->xb, w->wk + l*dim*kv_dim, dim, kv_dim);
+            matmul(s->v, s->xb, w->wv + l*dim*kv_dim, dim, kv_dim);
+        }
 
         // RoPE relative positional encoding: complex-valued rotate q and k in each head
         for (int i = 0; i < dim; i+=2) {
@@ -345,9 +351,15 @@ float* forward(Transformer* transformer, int token, int pos) {
         rmsnorm(s->xb, x, w->rms_ffn_weight + l*dim, dim);
 
         // Now for FFN in PyTorch we have: self.w2(F.silu(self.w1(x)) * self.w3(x))
-        // first calculate self.w1(x) and self.w3(x)
-        matmul(s->hb, s->xb, w->w1 + l*dim*hidden_dim, dim, hidden_dim);
-        matmul(s->hb2, s->xb, w->w3 + l*dim*hidden_dim, dim, hidden_dim);
+        // first calculate self.w1(x) and self.w3(x) - use batched operation
+        if(use_vortex) {
+            vx_matmul_ffn_batch(s->hb, s->hb2, s->xb, 
+                               w->w1 + l*dim*hidden_dim, w->w3 + l*dim*hidden_dim,
+                               dim, hidden_dim);
+        } else {
+            matmul(s->hb, s->xb, w->w1 + l*dim*hidden_dim, dim, hidden_dim);
+            matmul(s->hb2, s->xb, w->w3 + l*dim*hidden_dim, dim, hidden_dim);
+        }
 
         // SwiGLU non-linearity
         for (int i = 0; i < hidden_dim; i++) {
@@ -989,6 +1001,11 @@ int main(int argc, char *argv[]) {
     free_sampler(&sampler);
     free_tokenizer(&tokenizer);
     free_transformer(&transformer);
+    
+    if (use_vortex) {
+        matmul_cleanup();
+    }
+    
     return 0;
 }
 #endif
