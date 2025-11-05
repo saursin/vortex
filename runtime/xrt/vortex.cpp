@@ -615,6 +615,7 @@ public:
 
       std::cout  << "[VXDBG] Waiting for start signal from debugger...\n";
       debug_server_.wait_for_start_signal();
+      std::cout << "[VXDBG] Received start signal from debugger, resuming kernel execution.\n";
     }
 #endif
 

@@ -543,8 +543,15 @@ private:
       cmd = line;
 
       // printf("[DBGSERVER] Got: %s\n", line.c_str());
-
-      if (cmd[0] == 'r') {
+      if(cmd[0] == 'p') {
+        // reply immediately to ping
+        const char* ackmsg = "+P\n";
+        send(client_fd, ackmsg, strlen(ackmsg), 0);
+        // printf("[DBGSERVER] Sent: %s", ackmsg);
+        cmd = "";
+        return;
+      }
+      else if (cmd[0] == 'r') {
         addr = std::stoul(cmd.substr(1), nullptr, 16);
       }
       else if (cmd[0] == 'w') {
