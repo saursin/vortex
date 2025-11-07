@@ -509,25 +509,15 @@ module VX_debug_module import VX_gpu_pkg::*; #(
     
     ////////////////////////////////////////////////////////////////////////////////
     // Debug bus interface logic
-    logic vxdbg_req_seen;
 
     always_ff @(posedge clk) begin
         if(reset) begin
-            vxdbg_req_seen <= 1'b0;
             vxdbg_rdata <= '0;
             vxdbg_ack <= 1'b0;
         end
         else begin
-            vxdbg_ack <= 1'b0;  // default
-
-            if(!vxdbg_valid) begin
-                // Clear request seen flag when no valid request
-                vxdbg_req_seen <= 1'b0;
-            end
-            
-            if (vxdbg_valid && !vxdbg_req_seen) begin
-                // Mark request as seen and process it
-                vxdbg_req_seen <= 1'b1;
+            vxdbg_ack <= 1'b0;  // Default
+            if(vxdbg_valid && !vxdbg_ack) begin
                 vxdbg_ack <= 1'b1;
 
                 if(!vxdbg_we) begin
